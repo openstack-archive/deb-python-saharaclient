@@ -1,0 +1,5 @@
+python-saharaclient (0.6.0-1) experimental; urgency=low
+
+  * Initial release (Closes: #742478).
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 24 Mar 2014 14:58:19 +0800

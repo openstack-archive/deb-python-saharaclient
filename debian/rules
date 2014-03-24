@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+
+PYTHONS:=$(shell pyversions -vr)
+PYTHON3S:=$(shell py3versions -vr)
+
+include /usr/share/openstack-pkg-tools/pkgos.make
+export OSLO_PACKAGE_VERSION=$(VERSION)
+
+%:
+	dh $@ --buildsystem=python_distutils --with python2,sphinxdoc
+
+override_dh_auto_install:
+	# We don't care the old "savanna" compatibility layer for before
+	# the package was renamed, so we just get rid of it...
+	set -e && for pyvers in $(PYTHONS); do \
+		python$$pyvers setup.py install --install-layout=deb \
+			--root $(CURDIR)/debian/python-saharaclient; \
+		rm -r $(CURDIR)/debian/python-saharaclient/usr/lib/python$$pyvers/dist-packages/savannaclient ; \
+		rm $(CURDIR)/debian/python-saharaclient/usr/bin/savanna ; \
+	done
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	set -e ; \
+		TEMP_REZ=`mktemp -t` ; \
+		python setup.py testr --slowest --testr-args='--subunit  ' | tee $$TEMP_REZ | subunit2pyunit ; \
+		cat $$TEMP_REZ | subunit-filter -s --no-passthrough | subunit-stats ; \
+		rm -f $$TEMP_REZ
+endif
+
+override_dh_installman:
+ifeq (,$(findstring nodocs, $(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=. sphinx-build -b man doc/source doc/build/man
+	cp doc/build/man/saharaclient.1 doc/build/man/sahara.1
+	dh_installman -O--buildsystem=python_distutils
+endif
+
+override_dh_sphinxdoc:
+ifeq (,$(findstring nodocs, $(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=. sphinx-build -b html doc/source $(CURDIR)/debian/python-saharaclient-doc/usr/share/doc/python-saharaclient-doc/html
+	dh_sphinxdoc -O--buildsystem=python_distutils
+endif
+
+override_dh_clean:
+	dh_clean -O--buildsystem=python_distutils
+	rm -rf doc/build
