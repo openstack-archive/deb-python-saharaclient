@@ -10,13 +10,9 @@ export OSLO_PACKAGE_VERSION=$(VERSION)
 	dh $@ --buildsystem=python_distutils --with python2,sphinxdoc
 
 override_dh_auto_install:
-	# We don't care the old "savanna" compatibility layer for before
-	# the package was renamed, so we just get rid of it...
 	set -e && for pyvers in $(PYTHONS); do \
 		python$$pyvers setup.py install --install-layout=deb \
 			--root $(CURDIR)/debian/python-saharaclient; \
-		rm -r $(CURDIR)/debian/python-saharaclient/usr/lib/python$$pyvers/dist-packages/savannaclient ; \
-		rm $(CURDIR)/debian/python-saharaclient/usr/bin/savanna ; \
 	done
 
 override_dh_auto_test:
