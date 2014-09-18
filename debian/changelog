@@ -3,6 +3,8 @@ python-saharaclient (0.7.3-1) experimental; urgency=medium
   * New upstream release.
   * Uploading to experimental before the Jessie freeze.
   * Updated (build-)depends for this release.
+  * Allow the unit tests to fail, because it isn't desirable to build with the
+    keystone server up, which is what the unit tests are expecting.
 
  -- Thomas Goirand <zigo@debian.org>  Thu, 18 Sep 2014 23:08:48 +0800
 
