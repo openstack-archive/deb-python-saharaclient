@@ -1,3 +1,10 @@
+python-saharaclient (0.7.3-1-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Uploading to experimental before the Jessie freeze.
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 18 Sep 2014 23:08:48 +0800
+
 python-saharaclient (0.7.0-1) unstable; urgency=medium
 
   * New upstream release.
