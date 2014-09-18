@@ -11,21 +11,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-#import prettytable
 import re
-import six
 import sys
-
-#from distutils.version import StrictVersion
 
 import fixtures
 import mock
+import six
 from testtools import matchers
 
 import saharaclient.api.client
 from saharaclient.openstack.common.apiclient import exceptions
 import saharaclient.shell
-from saharaclient.tests.nova import utils
+from saharaclient.tests.unit.nova import utils
 
 FAKE_ENV = {'OS_USERNAME': 'username',
             'OS_PASSWORD': 'password',
@@ -278,7 +275,7 @@ class ShellTest(utils.TestCase):
             '+------+------------+----------+------+-------------+\n'
             '| name | id         | username | tags | description |\n'
             '+------+------------+----------+------+-------------+\n'
-            '| fake | aaa-bb-ccc | you      |      | None        |\n'
+            '| fake | aaa-bb-ccc | you      |      | -           |\n'
             '+------+------------+----------+------+-------------+\n'
         )
         self.make_env()

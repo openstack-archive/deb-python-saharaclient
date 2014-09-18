@@ -15,7 +15,10 @@
 
 import json
 import logging
+
 import six
+
+from saharaclient.openstack.common.gettextutils import _
 
 LOG = logging.getLogger(__name__)
 
@@ -73,7 +76,7 @@ class ResourceManager(object):
     def _create(self, url, data, response_key=None, dump_json=True):
         if dump_json:
             data = json.dumps(data)
-        resp = self.api.client.post(url, data)
+        resp = self.api.client.post(url, data, json=dump_json)
 
         if resp.status_code != 202:
             self._raise_api_exception(resp)
@@ -87,7 +90,7 @@ class ResourceManager(object):
     def _update(self, url, data, response_key=None, dump_json=True):
         if dump_json:
             data = json.dumps(data)
-        resp = self.api.client.put(url, data)
+        resp = self.api.client.put(url, data, json=dump_json)
 
         if resp.status_code != 202:
             self._raise_api_exception(resp)
@@ -129,17 +132,22 @@ class ResourceManager(object):
         return self.resource_class.resource_name + 's'
 
     def _raise_api_exception(self, resp):
-        error_data = get_json(resp)
+        try:
+            error_data = get_json(resp)
+        except Exception:
+            raise APIException(
+                error_code=resp.status_code,
+                error_message=_("Failed to parse response from Sahara. Check "
+                                "if service catalog configured properly."))
+
         raise APIException(error_code=error_data.get("error_code"),
                            error_name=error_data.get("error_name"),
                            error_message=error_data.get("error_message"))
 
 
 def get_json(response):
-    """This method provided backward compatibility with old versions
-    of requests library
+    """Provide backward compatibility with old versions of requests library."""
 
-    """
     json_field_or_function = getattr(response, 'json', None)
     if callable(json_field_or_function):
         return response.json()

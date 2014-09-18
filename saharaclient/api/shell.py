@@ -17,13 +17,39 @@ import argparse
 import datetime
 import inspect
 import json
+import sys
+
 from saharaclient.nova import utils
 from saharaclient.openstack.common.apiclient import exceptions
-import sys
 
 
 def _print_list_field(field):
     return lambda obj: ', '.join(getattr(obj, field))
+
+
+def _filter_call_args(args, func, remap={}):
+    """Filter args according to func's parameter list.
+
+    Take three arguments:
+     * args - a dictionary
+     * func - a function
+     * remap - a dictionary
+    Remove from dct all the keys which are not among the parameters
+    of func. Before filtering, remap the keys in the args dict
+    according to remap dict.
+    """
+
+    for name, new_name in remap.items():
+        if name in args:
+            args[new_name] = args[name]
+            del args[name]
+
+    valid_args = inspect.getargspec(func).args
+    for name in args.keys():
+        if name not in valid_args:
+            print('WARNING: "%s" is not a valid parameter and will be '
+                  'discarded from the request' % name)
+            del args[name]
 
 
 def _print_node_group_field(cluster):
@@ -122,7 +148,7 @@ def do_plugin_list(cs, args):
            required=True,
            help='Name of the plugin.')
 # TODO(mattf) - saharaclient does not support query w/ version
-#@utils.arg('--version',
+# @utils.arg('--version',
 #           metavar='<version>',
 #           help='Optional version')
 def do_plugin_show(cs, args):
@@ -289,18 +315,15 @@ def do_cluster_show(cs, args):
            help='JSON representation of cluster.')
 def do_cluster_create(cs, args):
     """Create a cluster."""
-     # TODO(mattf): improve template validation, e.g. template w/o name key
+    # TODO(mattf): improve template validation, e.g. template w/o name key
     template = json.loads(args.json.read())
     # The neutron_management_network parameter to clusters.create is
     # called net_id. Therefore, we must translate before invoking
     # create w/ **template. It may be desirable to simple change
     # clusters.create in the future.
-    template['net_id'] = template.get('neutron_management_network', None)
-    valid_args = inspect.getargspec(cs.clusters.create).args
-    for name in template.keys():
-        if name not in valid_args:
-            # TODO(mattf): make this verbose - bug/1271147
-            del template[name]
+    remap = {'neutron_management_network': 'net_id'}
+    _filter_call_args(template, cs.clusters.create, remap)
+
     _show_cluster(cs.clusters.create(**template))
 
 
@@ -361,13 +384,10 @@ def do_node_group_template_show(cs, args):
            help='JSON representation of node group template.')
 def do_node_group_template_create(cs, args):
     """Create a node group template."""
-     # TODO(mattf): improve template validation, e.g. template w/o name key
+    # TODO(mattf): improve template validation, e.g. template w/o name key
     template = json.loads(args.json.read())
-    valid_args = inspect.getargspec(cs.node_group_templates.create).args
-    for name in template.keys():
-        if name not in valid_args:
-            # TODO(mattf): make this verbose - bug/1271147
-            del template[name]
+    _filter_call_args(template, cs.node_group_templates.create)
+
     _show_node_group_template(cs.node_group_templates.create(**template))
 
 
@@ -429,13 +449,11 @@ def do_cluster_template_show(cs, args):
            help='JSON representation of cluster template.')
 def do_cluster_template_create(cs, args):
     """Create a cluster template."""
-     # TODO(mattf): improve template validation, e.g. template w/o name key
+    # TODO(mattf): improve template validation, e.g. template w/o name key
     template = json.loads(args.json.read())
-    valid_args = inspect.getargspec(cs.cluster_templates.create).args
-    for name in template.keys():
-        if name not in valid_args:
-            # TODO(mattf): make this verbose - bug/1271147
-            del template[name]
+    remap = {'neutron_management_network': 'net_id'}
+    _filter_call_args(template, cs.cluster_templates.create, remap)
+
     _show_cluster_template(cs.cluster_templates.create(**template))
 
 
@@ -542,6 +560,7 @@ def do_job_binary_data_list(cs, args):
            help='Data to store.')
 def do_job_binary_data_create(cs, args):
     """Store data in the internal DB.
+
     Use 'swift upload' instead of this command.
     Use this command only if Swift is not available.
     """
@@ -761,6 +780,7 @@ def do_job_show(cs, args):
            default=[],
            help='Config parameters to add to the job, repeatable.')
 def do_job_create(cs, args):
+    """Create a job."""
     _convert = lambda ls: dict(map(lambda i: i.split('=', 1), ls))
     _show_job(cs.job_executions.create(args.job_template, args.cluster,
                                        args.input_data, args.output_data,
