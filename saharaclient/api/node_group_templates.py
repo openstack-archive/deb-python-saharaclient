@@ -24,11 +24,12 @@ class NodeGroupTemplateManager(base.ResourceManager):
     resource_class = NodeGroupTemplate
 
     def _assign_field(self, name, plugin_name, hadoop_version, flavor_id,
-                      description=None,
-                      volumes_per_node=None, volumes_size=None,
-                      node_processes=None, node_configs=None,
-                      floating_ip_pool=None, security_groups=None,
-                      auto_security_group=None):
+                      description=None, volumes_per_node=None,
+                      volumes_size=None, node_processes=None,
+                      node_configs=None, floating_ip_pool=None,
+                      security_groups=None, auto_security_group=None,
+                      availability_zone=None, volumes_availability_zone=None,
+                      volume_type=None):
 
         data = {
             'name': name,
@@ -43,46 +44,59 @@ class NodeGroupTemplateManager(base.ResourceManager):
                               node_configs=node_configs,
                               floating_ip_pool=floating_ip_pool,
                               security_groups=security_groups,
-                              auto_security_group=auto_security_group
+                              auto_security_group=auto_security_group,
+                              availability_zone=availability_zone
                               )
 
         if volumes_per_node:
             data.update({"volumes_per_node": volumes_per_node,
                          "volumes_size": volumes_size})
+            if volumes_availability_zone:
+                data.update({"volumes_availability_zone":
+                             volumes_availability_zone})
+            if volume_type:
+                data.update({"volume_type": volume_type})
 
         return data
 
     def create(self, name, plugin_name, hadoop_version, flavor_id,
                description=None, volumes_per_node=None, volumes_size=None,
                node_processes=None, node_configs=None, floating_ip_pool=None,
-               security_groups=None, auto_security_group=None):
+               security_groups=None, auto_security_group=None,
+               availability_zone=None, volumes_availability_zone=None,
+               volume_type=None):
 
         data = self._assign_field(name, plugin_name, hadoop_version, flavor_id,
                                   description, volumes_per_node, volumes_size,
                                   node_processes, node_configs,
                                   floating_ip_pool, security_groups,
-                                  auto_security_group)
+                                  auto_security_group, availability_zone,
+                                  volumes_availability_zone, volume_type)
 
         return self._create('/node-group-templates', data,
                             'node_group_template')
 
     def update(self, ng_template_id, name, plugin_name, hadoop_version,
                flavor_id, description=None, volumes_per_node=None,
-               volumes_size=None, node_processes=None,
-               node_configs=None, floating_ip_pool=None,
-               security_groups=None, auto_security_group=None):
+               volumes_size=None, node_processes=None, node_configs=None,
+               floating_ip_pool=None, security_groups=None,
+               auto_security_group=None, availability_zone=None,
+               volumes_availability_zone=None, volume_type=None):
 
         data = self._assign_field(name, plugin_name, hadoop_version, flavor_id,
-                                  description, volumes_per_node,
-                                  volumes_size, node_processes,
-                                  node_configs, floating_ip_pool,
-                                  security_groups, auto_security_group)
+                                  description, volumes_per_node, volumes_size,
+                                  node_processes, node_configs,
+                                  floating_ip_pool, security_groups,
+                                  auto_security_group, availability_zone,
+                                  volumes_availability_zone, volume_type)
 
         return self._update('/node-group-templates/%s' % ng_template_id, data,
                             'node_group_template')
 
-    def list(self):
-        return self._list('/node-group-templates', 'node_group_templates')
+    def list(self, search_opts=None):
+        query = base.get_query_string(search_opts)
+        return self._list('/node-group-templates%s' % query,
+                          'node_group_templates')
 
     def get(self, ng_template_id):
         return self._get('/node-group-templates/%s' % ng_template_id,

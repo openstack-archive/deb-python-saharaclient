@@ -25,15 +25,9 @@ Command-line interface to the OpenStack Sahara API.
 from __future__ import print_function
 import argparse
 import getpass
-import glob
-import imp
-import itertools
 import logging
-import os
-import pkgutil
 import sys
 
-import pkg_resources
 import six
 
 
@@ -53,10 +47,14 @@ try:
 except ImportError:
     pass
 
+from keystoneclient.auth.identity.generic import password
+from keystoneclient.auth.identity.generic import token
+from keystoneclient.auth.identity import v3 as identity
+from keystoneclient import session
+
 from saharaclient.api import client
 from saharaclient.api import shell as shell_api
-from saharaclient.nova import auth_plugin as nova_auth_plugin
-from saharaclient.nova import extension as nova_extension
+from saharaclient.openstack.common.apiclient import auth
 from saharaclient.openstack.common.apiclient import exceptions as exc
 from saharaclient.openstack.common import cliutils
 from saharaclient.openstack.common import strutils
@@ -64,7 +62,7 @@ from saharaclient import version
 
 DEFAULT_API_VERSION = 'api'
 DEFAULT_ENDPOINT_TYPE = 'publicURL'
-DEFAULT_SERVICE_TYPE = 'data_processing'
+DEFAULT_SERVICE_TYPE = 'data-processing'
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +256,7 @@ class OpenStackSaharaShell(object):
                             help="Use the auth token cache. Defaults to False "
                             "if env[OS_CACHE] is not set.")
 
+
 # TODO(mattf) - add get_timings support to Client
 #        parser.add_argument('--timings',
 #            default=False,
@@ -271,60 +270,17 @@ class OpenStackSaharaShell(object):
 #            type=positive_non_zero_float,
 #            help="Set HTTP call timeout (in seconds)")
 
-        parser.add_argument('--os-username',
-                            metavar='<auth-user-name>',
-                            default=cliutils.env('OS_USERNAME',
-                                                 'SAHARA_USERNAME'),
-                            help='Defaults to env[OS_USERNAME].')
-        parser.add_argument('--os_username',
-                            help=argparse.SUPPRESS)
-
-        parser.add_argument('--os-password',
-                            metavar='<auth-password>',
-                            default=cliutils.env('OS_PASSWORD',
-                                                 'SAHARA_PASSWORD'),
-                            help='Defaults to env[OS_PASSWORD].')
-        parser.add_argument('--os_password',
-                            help=argparse.SUPPRESS)
-
-        parser.add_argument('--os-tenant-name',
-                            metavar='<auth-tenant-name>',
-                            default=cliutils.env('OS_TENANT_NAME',
-                                                 'SAHARA_PROJECT_ID'),
-                            help='Defaults to env[OS_TENANT_NAME].')
-        parser.add_argument('--os_tenant_name',
-                            help=argparse.SUPPRESS)
-
-        parser.add_argument('--os-tenant-id',
-                            metavar='<auth-tenant-id>',
-                            default=cliutils.env('OS_TENANT_ID'),
-                            help='Defaults to env[OS_TENANT_ID].')
-
-        parser.add_argument('--os-auth-url',
-                            metavar='<auth-url>',
-                            default=cliutils.env('OS_AUTH_URL', 'SAHARA_URL'),
-                            help='Defaults to env[OS_AUTH_URL].')
-        parser.add_argument('--os_auth_url',
-                            help=argparse.SUPPRESS)
-
 # NA
 #        parser.add_argument('--os-region-name',
 #            metavar='<region-name>',
-#            default=utils.env('OS_REGION_NAME', 'SAHARA_REGION_NAME'),
+#            default=cliutils.env('OS_REGION_NAME', 'SAHARA_REGION_NAME'),
 #            help='Defaults to env[OS_REGION_NAME].')
 #        parser.add_argument('--os_region_name',
 #            help=argparse.SUPPRESS)
 
-        parser.add_argument('--os-auth-system',
-                            metavar='<auth-system>',
-                            default=cliutils.env('OS_AUTH_SYSTEM'),
-                            help='Defaults to env[OS_AUTH_SYSTEM].')
-        parser.add_argument('--os_auth_system',
-                            help=argparse.SUPPRESS)
-
         parser.add_argument('--service-type',
                             metavar='<service-type>',
-                            help='Defaults to data_processing for all '
+                            help='Defaults to data-processing for all '
                                  'actions.')
         parser.add_argument('--service_type',
                             help=argparse.SUPPRESS)
@@ -369,22 +325,6 @@ class OpenStackSaharaShell(object):
         parser.add_argument('--sahara_api_version',
                             help=argparse.SUPPRESS)
 
-        parser.add_argument('--os-cacert',
-                            metavar='<ca-certificate>',
-                            default=cliutils.env('OS_CACERT', default=None),
-                            help='Specify a CA bundle file to use in '
-                            'verifying a TLS (https) server certificate. '
-                            'Defaults to env[OS_CACERT].')
-
-# NA
-#        parser.add_argument('--insecure',
-#            default=utils.env('NOVACLIENT_INSECURE', default=False),
-#            action='store_true',
-#            help="Explicitly allow novaclient to perform \"insecure\" "
-#                 "SSL (https) requests. The server's certificate will "
-#                 "not be verified against any certificate authorities. "
-#                 "This option should be used with caution.")
-
         parser.add_argument('--bypass-url',
                             metavar='<bypass-url>',
                             default=cliutils.env('BYPASS_URL', default=None),
@@ -394,8 +334,25 @@ class OpenStackSaharaShell(object):
         parser.add_argument('--bypass_url',
                             help=argparse.SUPPRESS)
 
-        # The auth-system-plugins might require some extra options
-        nova_auth_plugin.load_auth_system_opts(parser)
+        parser.add_argument('--os-tenant-name',
+                            default=cliutils.env('OS_TENANT_NAME'),
+                            help='Defaults to env[OS_TENANT_NAME].')
+
+        parser.add_argument('--os-tenant-id',
+                            default=cliutils.env('OS_TENANT_ID'),
+                            help='Defaults to env[OS_TENANT_ID].')
+
+        parser.add_argument('--os-auth-system',
+                            default=cliutils.env('OS_AUTH_SYSTEM'),
+                            help='Defaults to env[OS_AUTH_SYSTEM].')
+
+        parser.add_argument('--os-auth-token',
+                            default=cliutils.env('OS_AUTH_TOKEN'),
+                            help='Defaults to env[OS_AUTH_TOKEN].')
+
+        # Use Keystoneclient API to parse authentication arguments
+        session.Session.register_cli_options(parser)
+        identity.Password.register_argparse_arguments(parser)
 
         return parser
 
@@ -416,59 +373,9 @@ class OpenStackSaharaShell(object):
         self._find_actions(subparsers, actions_module)
         self._find_actions(subparsers, self)
 
-        for extension in self.extensions:
-            self._find_actions(subparsers, extension.module)
-
         self._add_bash_completion_subparser(subparsers)
 
         return parser
-
-    def _discover_extensions(self, version):
-        extensions = []
-        for name, module in itertools.chain(
-                self._discover_via_python_path(),
-                self._discover_via_contrib_path(version),
-                self._discover_via_entry_points()):
-
-            extension = nova_extension.Extension(name, module)
-            extensions.append(extension)
-
-        return extensions
-
-    def _discover_via_python_path(self):
-        for (module_loader, name, _ispkg) in pkgutil.iter_modules():
-            if name.endswith('_python_saharaclient_ext'):
-                if not hasattr(module_loader, 'load_module'):
-                    # Python 2.6 compat: actually get an ImpImporter obj
-                    module_loader = module_loader.find_module(name)
-
-                module = module_loader.load_module(name)
-                if hasattr(module, 'extension_name'):
-                    name = module.extension_name
-
-                yield name, module
-
-    def _discover_via_contrib_path(self, version):
-        module_path = os.path.dirname(os.path.abspath(__file__))
-        version_str = "v%s" % version.replace('.', '_')
-        ext_path = os.path.join(module_path, version_str, 'contrib')
-        ext_glob = os.path.join(ext_path, "*.py")
-
-        for ext_path in glob.iglob(ext_glob):
-            name = os.path.basename(ext_path)[:-3]
-
-            if name == "__init__":
-                continue
-
-            module = imp.load_source(name, ext_path)
-            yield name, module
-
-    def _discover_via_entry_points(self):
-        for ep in pkg_resources.iter_entry_points('saharaclient.extension'):
-            name = ep.name
-            module = ep.load()
-
-            yield name, module
 
     def _add_bash_completion_subparser(self, subparsers):
         subparser = (
@@ -513,21 +420,27 @@ class OpenStackSaharaShell(object):
         logging.basicConfig(level=logging.DEBUG,
                             format=streamformat)
 
+    def _get_keystone_auth(self, session, auth_url, **kwargs):
+        auth_token = kwargs.pop('auth_token', None)
+        if auth_token:
+            return token.Token(auth_url, auth_token, **kwargs)
+        else:
+            return password.Password(
+                auth_url,
+                username=kwargs.pop('username'),
+                user_id=kwargs.pop('user_id'),
+                password=kwargs.pop('password'),
+                user_domain_id=kwargs.pop('user_domain_id'),
+                user_domain_name=kwargs.pop('user_domain_name'),
+                **kwargs)
+
     def main(self, argv):
 
         # Parse args once to find version and debug settings
         parser = self.get_base_parser()
         (options, args) = parser.parse_known_args(argv)
         self.setup_debugging(options.debug)
-
-        # Discover available auth plugins
-        nova_auth_plugin.discover_auth_systems()
-
-        # build available subcommands based on version
-        self.extensions = (
-            self._discover_extensions(options.sahara_api_version)
-        )
-        self._run_extension_hooks('__pre_parse_args__')
+        self.options = options
 
         # NOTE(dtroyer): Hackery to handle --endpoint_type due to argparse
         #                thinking usage-list --end is ambiguous; but it
@@ -547,7 +460,6 @@ class OpenStackSaharaShell(object):
             return 0
 
         args = subcommand_parser.parse_args(argv)
-        self._run_extension_hooks('__post_parse_args__', args)
 
         # Short-circuit and deal with help right away.
         if args.func == self.do_help:
@@ -580,7 +492,7 @@ class OpenStackSaharaShell(object):
         )
 
         if os_auth_system and os_auth_system != "keystone":
-            auth_plugin = nova_auth_plugin.load_plugin(os_auth_system)
+            auth_plugin = auth.load_plugin(os_auth_system)
         else:
             auth_plugin = None
 
@@ -606,12 +518,6 @@ class OpenStackSaharaShell(object):
                     raise exc.CommandError("You must provide a username "
                                            "via either --os-username or "
                                            "env[OS_USERNAME]")
-
-            if not os_tenant_name and not os_tenant_id:
-                raise exc.CommandError("You must provide a tenant name "
-                                       "or tenant id via --os-tenant-name, "
-                                       "--os-tenant-id, env[OS_TENANT_NAME] "
-                                       "or env[OS_TENANT_ID]")
 
             if not os_auth_url:
                 if os_auth_system and os_auth_system != 'keystone':
@@ -679,21 +585,63 @@ class OpenStackSaharaShell(object):
 #                self.cs.client.password = os_password
 #                self.cs.client.keyring_saver = helper
 
-# NA
-#        try:
-#            if not utils.isunauthenticated(args.func):
-#                self.cs.authenticate()
-#        except exc.Unauthorized:
-#            raise exc.CommandError("Invalid OpenStack Sahara credentials.")
-#        except exc.AuthorizationFailure:
-#            raise exc.CommandError("Unable to authorize user")
+        # V3 stuff
+        project_info_provided = (self.options.os_tenant_name or
+                                 self.options.os_tenant_id or
+                                 (self.options.os_project_name and
+                                  (self.options.os_project_domain_name or
+                                   self.options.os_project_domain_id)) or
+                                 self.options.os_project_id)
+
+        if (not project_info_provided):
+            raise exc.CommandError(
+                ("You must provide a tenant_name, tenant_id, "
+                 "project_id or project_name (with "
+                 "project_domain_name or project_domain_id) via "
+                 "  --os-tenant-name (env[OS_TENANT_NAME]),"
+                 "  --os-tenant-id (env[OS_TENANT_ID]),"
+                 "  --os-project-id (env[OS_PROJECT_ID])"
+                 "  --os-project-name (env[OS_PROJECT_NAME]),"
+                 "  --os-project-domain-id "
+                 "(env[OS_PROJECT_DOMAIN_ID])"
+                 "  --os-project-domain-name "
+                 "(env[OS_PROJECT_DOMAIN_NAME])"))
+
+        if not os_auth_url:
+            raise exc.CommandError(
+                "You must provide an auth url "
+                "via either --os-auth-url or env[OS_AUTH_URL]")
+
+        keystone_session = None
+        keystone_auth = None
+        if not auth_plugin:
+            project_id = args.os_project_id or args.os_tenant_id
+            project_name = args.os_project_name or args.os_tenant_name
+
+            keystone_session = (session.Session.
+                                load_from_cli_options(args))
+            keystone_auth = self._get_keystone_auth(
+                keystone_session,
+                args.os_auth_url,
+                username=args.os_username,
+                user_id=args.os_user_id,
+                user_domain_id=args.os_user_domain_id,
+                user_domain_name=args.os_user_domain_name,
+                password=args.os_password,
+                auth_token=args.os_auth_token,
+                project_id=project_id,
+                project_name=project_name,
+                project_domain_id=args.os_project_domain_id,
+                project_domain_name=args.os_project_domain_name)
 
         self.cs = client.Client(username=os_username,
                                 api_key=os_password,
                                 project_id=os_tenant_id,
                                 project_name=os_tenant_name,
                                 auth_url=os_auth_url,
-                                sahara_url=bypass_url)
+                                sahara_url=bypass_url,
+                                session=keystone_session,
+                                auth=keystone_auth)
 
         args.func(self.cs, args)
 
@@ -712,11 +660,6 @@ class OpenStackSaharaShell(object):
             total += tyme.seconds
         results.append(Tyme("Total", total))
         cliutils.print_list(results, ["url", "seconds"], sortby_index=None)
-
-    def _run_extension_hooks(self, hook_type, *args, **kwargs):
-        """Run hooks for all registered extensions."""
-        for extension in self.extensions:
-            extension.run_hooks(hook_type, *args, **kwargs)
 
     def do_bash_completion(self, _args):
         """Prints arguments for bash-completion.

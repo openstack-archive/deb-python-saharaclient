@@ -17,7 +17,7 @@ The client constructor has a list of parameters to authenticate and locate Sahar
 
  * auth_url - Keystone URL that will be used for authentication.
  * sahara_url - Sahara REST API URL to communicate with.
- * service_type - Sahara service name in Keystone catalog. (Default: data_processing)
+ * service_type - Sahara service name in Keystone catalog. (Default: data-processing)
  * endpoint_type - Desired Sahara endpoint type. (Default: publicURL)
  * username - Username for Keystone authentication.
  * api_key - Password for Keystone authentication.
@@ -133,7 +133,7 @@ Image Registry ops
 Node Group Template ops
 ~~~~~~~~~~~~~~~~~~~~~~~
 
- * create(name, plugin_name, hadoop_version, flavor_id, description, volumes_per_node, volumes_size, node_processes, node_configs, floating_ip_pool) - Create a Node Group Template with specified parameters.
+ * create(name, plugin_name, hadoop_version, flavor_id, description, volumes_per_node, volumes_size, node_processes, node_configs, floating_ip_pool, availability_zone, volumes_availability_zone) - Create a Node Group Template with specified parameters.
 
 Cluster Template ops
 ~~~~~~~~~~~~~~~~~~~~
