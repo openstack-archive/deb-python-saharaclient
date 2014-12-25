@@ -1,6 +1,7 @@
 python-saharaclient (0.7.6-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Reviewed (build-)depends for this release.
 
  -- Thomas Goirand <zigo@debian.org>  Thu, 25 Dec 2014 23:23:00 +0800
 
