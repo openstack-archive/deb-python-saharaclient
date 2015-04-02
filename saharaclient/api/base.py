@@ -19,7 +19,7 @@ import logging
 import six
 from six.moves.urllib import parse
 
-from saharaclient.openstack.common.gettextutils import _
+from saharaclient.openstack.common._i18n import _
 
 LOG = logging.getLogger(__name__)
 
@@ -69,6 +69,16 @@ class ResourceManager(object):
     def find(self, **kwargs):
         return [i for i in self.list() if _check_items(i, kwargs.items())]
 
+    def find_unique(self, **kwargs):
+        found = self.find(**kwargs)
+        if not found:
+            raise APIException(error_code=404,
+                               error_message=_("No matches found."))
+        if len(found) > 1:
+            raise APIException(error_code=409,
+                               error_message=_("Multiple matches found."))
+        return found[0]
+
     def _copy_if_defined(self, data, **kwargs):
         for var_name, var_value in six.iteritems(kwargs):
             if var_value is not None:
@@ -77,7 +87,7 @@ class ResourceManager(object):
     def _create(self, url, data, response_key=None, dump_json=True):
         if dump_json:
             data = json.dumps(data)
-        resp = self.api.client.post(url, data, json=dump_json)
+        resp = self.api.post(url, data, json=dump_json)
 
         if resp.status_code != 202:
             self._raise_api_exception(resp)
@@ -91,7 +101,7 @@ class ResourceManager(object):
     def _update(self, url, data, response_key=None, dump_json=True):
         if dump_json:
             data = json.dumps(data)
-        resp = self.api.client.put(url, data, json=dump_json)
+        resp = self.api.put(url, data, json=dump_json)
 
         if resp.status_code != 202:
             self._raise_api_exception(resp)
@@ -102,7 +112,7 @@ class ResourceManager(object):
         return self.resource_class(self, data)
 
     def _list(self, url, response_key):
-        resp = self.api.client.get(url)
+        resp = self.api.get(url)
         if resp.status_code == 200:
             data = get_json(resp)[response_key]
 
@@ -112,7 +122,7 @@ class ResourceManager(object):
             self._raise_api_exception(resp)
 
     def _get(self, url, response_key=None):
-        resp = self.api.client.get(url)
+        resp = self.api.get(url)
 
         if resp.status_code == 200:
             if response_key is not None:
@@ -124,7 +134,7 @@ class ResourceManager(object):
             self._raise_api_exception(resp)
 
     def _delete(self, url):
-        resp = self.api.client.delete(url)
+        resp = self.api.delete(url)
 
         if resp.status_code != 204:
             self._raise_api_exception(resp)

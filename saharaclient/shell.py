@@ -51,13 +51,14 @@ from keystoneclient.auth.identity.generic import password
 from keystoneclient.auth.identity.generic import token
 from keystoneclient.auth.identity import v3 as identity
 from keystoneclient import session
+from oslo_utils import encodeutils
+from oslo_utils import strutils
 
 from saharaclient.api import client
 from saharaclient.api import shell as shell_api
 from saharaclient.openstack.common.apiclient import auth
 from saharaclient.openstack.common.apiclient import exceptions as exc
 from saharaclient.openstack.common import cliutils
-from saharaclient.openstack.common import strutils
 from saharaclient import version
 
 DEFAULT_API_VERSION = 'api'
@@ -485,10 +486,10 @@ class OpenStackSaharaShell(object):
 #                        args.os_cacert, args.timeout)
         (os_username, os_tenant_name, os_tenant_id,
          os_auth_url, os_auth_system, endpoint_type,
-         service_type, bypass_url) = (
+         service_type, bypass_url, os_cacert, insecure) = (
             (args.os_username, args.os_tenant_name, args.os_tenant_id,
              args.os_auth_url, args.os_auth_system, args.endpoint_type,
-             args.service_type, args.bypass_url)
+             args.service_type, args.bypass_url, args.os_cacert, args.insecure)
         )
 
         if os_auth_system and os_auth_system != "keystone":
@@ -640,8 +641,12 @@ class OpenStackSaharaShell(object):
                                 project_name=os_tenant_name,
                                 auth_url=os_auth_url,
                                 sahara_url=bypass_url,
+                                endpoint_type=endpoint_type,
                                 session=keystone_session,
-                                auth=keystone_auth)
+                                auth=keystone_auth,
+                                cacert=os_cacert,
+                                insecure=insecure,
+                                service_type=service_type)
 
         args.func(self.cs, args)
 
@@ -702,11 +707,12 @@ class OpenStackHelpFormatter(argparse.HelpFormatter):
 
 def main():
     try:
-        OpenStackSaharaShell().main(map(strutils.safe_decode, sys.argv[1:]))
+        OpenStackSaharaShell().main(map(encodeutils.safe_decode,
+                                        sys.argv[1:]))
 
     except Exception as e:
         logger.debug(e, exc_info=1)
-        print("ERROR: %s" % strutils.safe_encode(six.text_type(e)),
+        print("ERROR: %s" % encodeutils.safe_encode(six.text_type(e)),
               file=sys.stderr)
         sys.exit(1)
 

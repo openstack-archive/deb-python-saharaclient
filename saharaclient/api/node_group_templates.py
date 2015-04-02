@@ -29,7 +29,7 @@ class NodeGroupTemplateManager(base.ResourceManager):
                       node_configs=None, floating_ip_pool=None,
                       security_groups=None, auto_security_group=None,
                       availability_zone=None, volumes_availability_zone=None,
-                      volume_type=None):
+                      volume_type=None, image_id=None, is_proxy_gateway=None):
 
         data = {
             'name': name,
@@ -45,7 +45,9 @@ class NodeGroupTemplateManager(base.ResourceManager):
                               floating_ip_pool=floating_ip_pool,
                               security_groups=security_groups,
                               auto_security_group=auto_security_group,
-                              availability_zone=availability_zone
+                              availability_zone=availability_zone,
+                              image_id=image_id,
+                              is_proxy_gateway=is_proxy_gateway
                               )
 
         if volumes_per_node:
@@ -64,14 +66,15 @@ class NodeGroupTemplateManager(base.ResourceManager):
                node_processes=None, node_configs=None, floating_ip_pool=None,
                security_groups=None, auto_security_group=None,
                availability_zone=None, volumes_availability_zone=None,
-               volume_type=None):
+               volume_type=None, image_id=None, is_proxy_gateway=None):
 
         data = self._assign_field(name, plugin_name, hadoop_version, flavor_id,
                                   description, volumes_per_node, volumes_size,
                                   node_processes, node_configs,
                                   floating_ip_pool, security_groups,
                                   auto_security_group, availability_zone,
-                                  volumes_availability_zone, volume_type)
+                                  volumes_availability_zone, volume_type,
+                                  image_id, is_proxy_gateway)
 
         return self._create('/node-group-templates', data,
                             'node_group_template')
@@ -81,14 +84,16 @@ class NodeGroupTemplateManager(base.ResourceManager):
                volumes_size=None, node_processes=None, node_configs=None,
                floating_ip_pool=None, security_groups=None,
                auto_security_group=None, availability_zone=None,
-               volumes_availability_zone=None, volume_type=None):
+               volumes_availability_zone=None, volume_type=None,
+               image_id=None, is_proxy_gateway=None):
 
         data = self._assign_field(name, plugin_name, hadoop_version, flavor_id,
                                   description, volumes_per_node, volumes_size,
                                   node_processes, node_configs,
                                   floating_ip_pool, security_groups,
                                   auto_security_group, availability_zone,
-                                  volumes_availability_zone, volume_type)
+                                  volumes_availability_zone, volume_type,
+                                  image_id, is_proxy_gateway)
 
         return self._update('/node-group-templates/%s' % ng_template_id, data,
                             'node_group_template')

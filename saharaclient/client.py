@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from saharaclient.openstack.common import importutils
+from oslo_utils import importutils
 
 
 class UnsupportedVersion(Exception):
@@ -33,7 +33,7 @@ def get_client_class(version):
     try:
         client_path = version_map[str(version)]
     except (KeyError, ValueError):
-        supported_versions = ''.join(version_map.keys())
+        supported_versions = ', '.join(version_map.keys())
         msg = ("Invalid client version '%(version)s'; must be one of: "
                "%(versions)s") % {'version': version,
                                   'versions': supported_versions}

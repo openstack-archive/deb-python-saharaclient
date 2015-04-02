@@ -21,6 +21,7 @@ Contents:
    :maxdepth: 2
 
    api
+   how_to_participate
 
 Contributing
 ============
@@ -35,5 +36,5 @@ using `gerrit`_.
 .. _git.o.o: http://git.openstack.org/cgit/openstack/python-saharaclient
 .. _launchpad: https://launchpad.net/sahara
 .. _launchpad_client: https://launchpad.net/python-saharaclient
-.. _gerrit: http://wiki.openstack.org/GerritWorkflow
+.. _gerrit: http://docs.openstack.org/infra/manual/developers.html#development-workflow
 

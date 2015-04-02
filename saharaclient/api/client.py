@@ -14,12 +14,14 @@
 # limitations under the License.
 
 from keystoneclient import adapter
+from keystoneclient.openstack.common.apiclient import exceptions as kex
 from keystoneclient.v2_0 import client as keystone_client_v2
 from keystoneclient.v3 import client as keystone_client_v3
 
 from saharaclient.api import cluster_templates
 from saharaclient.api import clusters
 from saharaclient.api import data_sources
+from saharaclient.api import events
 from saharaclient.api import httpclient
 from saharaclient.api import images
 from saharaclient.api import job_binaries
@@ -33,9 +35,10 @@ from saharaclient.api import plugins
 class Client(object):
     def __init__(self, username=None, api_key=None, project_id=None,
                  project_name=None, auth_url=None, sahara_url=None,
-                 endpoint_type='publicURL', service_type='data_processing',
+                 endpoint_type='publicURL', service_type='data-processing',
                  service_name=None, region_name=None,
-                 input_auth_token=None, session=None, auth=None):
+                 input_auth_token=None, session=None, auth=None,
+                 insecure=False, cacert=None):
 
         keystone = None
         sahara_catalog_url = sahara_url
@@ -51,8 +54,18 @@ class Client(object):
                     service_name=service_name,
                     region_name=region_name)
                 input_auth_token = keystone.session.get_token(auth)
-                sahara_catalog_url = keystone.session.get_endpoint(
-                    auth, interface=endpoint_type, service_type=service_type)
+                if not sahara_catalog_url:
+                    try:
+                        sahara_catalog_url = keystone.session.get_endpoint(
+                            auth, interface=endpoint_type,
+                            service_type=service_type)
+                    except kex.EndpointNotFound:
+                        # This is support of 'data_processing' service spelling
+                        # which was used for releases before Kilo
+                        service_type = service_type.replace('-', '_')
+                        sahara_catalog_url = keystone.session.get_endpoint(
+                            auth, interface=endpoint_type,
+                            service_type=service_type)
             else:
                 keystone = self.get_keystone_client(
                     username=username,
@@ -68,7 +81,10 @@ class Client(object):
         if not sahara_catalog_url:
             catalog = keystone.service_catalog.get_endpoints(service_type)
             if service_type not in catalog:
+                # This is support of 'data_processing' service spelling
+                # which was used for releases before Kilo
                 service_type = service_type.replace('-', '_')
+                catalog = keystone.service_catalog.get_endpoints(service_type)
 
             if service_type in catalog:
                 for e_type, endpoint in catalog.get(service_type)[0].items():
@@ -78,23 +94,29 @@ class Client(object):
         if not sahara_catalog_url:
             raise RuntimeError("Could not find Sahara endpoint in catalog")
 
-        self.client = httpclient.HTTPClient(sahara_catalog_url,
-                                            input_auth_token)
+        client = httpclient.HTTPClient(sahara_catalog_url,
+                                       input_auth_token,
+                                       insecure=insecure,
+                                       cacert=cacert)
 
-        self.clusters = clusters.ClusterManager(self)
-        self.cluster_templates = cluster_templates.ClusterTemplateManager(self)
-        self.node_group_templates = (node_group_templates.
-                                     NodeGroupTemplateManager(self))
-        self.plugins = plugins.PluginManager(self)
-        self.images = images.ImageManager(self)
-
-        self.data_sources = data_sources.DataSourceManager(self)
-        self.jobs = jobs.JobsManager(self)
-        self.job_executions = job_executions.JobExecutionsManager(self)
-        self.job_binaries = job_binaries.JobBinariesManager(self)
-        self.job_binary_internals = (
-            job_binary_internals.JobBinaryInternalsManager(self)
+        self.clusters = clusters.ClusterManager(client)
+        self.cluster_templates = (
+            cluster_templates.ClusterTemplateManager(client)
         )
+        self.node_group_templates = (
+            node_group_templates.NodeGroupTemplateManager(client)
+        )
+        self.plugins = plugins.PluginManager(client)
+        self.images = images.ImageManager(client)
+
+        self.data_sources = data_sources.DataSourceManager(client)
+        self.jobs = jobs.JobsManager(client)
+        self.job_executions = job_executions.JobExecutionsManager(client)
+        self.job_binaries = job_binaries.JobBinariesManager(client)
+        self.job_binary_internals = (
+            job_binary_internals.JobBinaryInternalsManager(client)
+        )
+        self.events = events.ClusterEventManager(client)
 
     def get_keystone_client(self, username=None, api_key=None, auth_url=None,
                             token=None, project_id=None, project_name=None):

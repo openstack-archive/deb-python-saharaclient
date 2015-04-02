@@ -1,0 +1,84 @@
+# Copyright (c) 2014 Mirantis Inc.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+from saharaclient.api import jobs
+from saharaclient.tests.unit import base
+
+import json
+
+
+class JobTest(base.BaseTestCase):
+    body = {
+        'name': 'name',
+        'type': 'pig',
+        'mains': ['job_binary_id'],
+        'libs': [],
+        'description': 'descr'
+    }
+
+    def test_create_job(self):
+        url = self.URL + '/jobs'
+        self.responses.post(url, status_code=202, json={'job': self.body})
+
+        resp = self.client.jobs.create(**self.body)
+
+        self.assertEqual(url, self.responses.last_request.url)
+        self.assertEqual(self.body,
+                         json.loads(self.responses.last_request.body))
+        self.assertIsInstance(resp, jobs.Job)
+        self.assertFields(self.body, resp)
+
+    def test_jobs_list(self):
+        url = self.URL + '/jobs'
+        self.responses.get(url, json={'jobs': [self.body]})
+
+        resp = self.client.jobs.list()
+
+        self.assertEqual(url, self.responses.last_request.url)
+        self.assertIsInstance(resp[0], jobs.Job)
+        self.assertFields(self.body, resp[0])
+
+    def test_jobs_get(self):
+        url = self.URL + '/jobs/id'
+        self.responses.get(url, json={'job': self.body})
+
+        resp = self.client.jobs.get('id')
+
+        self.assertEqual(url, self.responses.last_request.url)
+        self.assertIsInstance(resp, jobs.Job)
+        self.assertFields(self.body, resp)
+
+    def test_jobs_get_configs(self):
+        url = self.URL + '/jobs/config-hints/Pig'
+        response = {
+            "job_config": {
+                "args": [],
+                "configs": []
+            }
+        }
+        self.responses.get(url, json=response)
+
+        resp = self.client.jobs.get_configs('Pig')
+
+        self.assertEqual(url, self.responses.last_request.url)
+        self.assertIsInstance(resp, jobs.Job)
+        self.assertFields(response, resp)
+
+    def test_jobs_delete(self):
+        url = self.URL + '/jobs/id'
+        self.responses.delete(url, status_code=204)
+
+        self.client.jobs.delete('id')
+
+        self.assertEqual(url, self.responses.last_request.url)
