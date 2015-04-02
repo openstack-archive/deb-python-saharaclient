@@ -1,4 +1,4 @@
-python-saharaclient (0.7.6-1) UNRELEASED; urgency=medium
+python-saharaclient (0.8.0-1) UNRELEASED; urgency=medium
 
   * New upstream release.
   * Reviewed (build-)depends for this release.
