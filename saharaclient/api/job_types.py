@@ -1,4 +1,4 @@
-# Copyright (c) 2014 Mirantis Inc.
+# Copyright (c) 2015 Red Hat Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,16 +16,13 @@
 from saharaclient.api import base
 
 
-class ClusterEvent(base.Resource):
-    resource_name = 'ClusterEvent'
+class JobType(base.Resource):
+    resource_name = 'JobType'
 
 
-class ClusterEventManager(base.ResourceManager):
-    resource_class = ClusterEvent
+class JobTypesManager(base.ResourceManager):
+    resource_class = JobType
 
-    def list(self, cluster_id, provision_step=None):
-        if provision_step:
-            return self._list('/clusters/%s/progress?provision_step=%s'
-                              % (cluster_id, provision_step), 'events')
-        else:
-            return self._list('/clusters/%s/progress' % cluster_id, 'events')
+    def list(self, search_opts=None):
+        query = base.get_query_string(search_opts)
+        return self._list('/job-types%s' % query, 'job_types')

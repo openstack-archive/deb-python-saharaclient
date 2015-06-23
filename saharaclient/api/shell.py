@@ -17,6 +17,7 @@ import argparse
 import datetime
 import inspect
 import json
+import os.path
 import sys
 
 from saharaclient.openstack.common.apiclient import exceptions
@@ -110,12 +111,12 @@ def _show_job(job):
     utils.print_dict(job._info)
 
 
-def _get_by_id_or_name(manager, id=None, name=None):
+def _get_by_id_or_name(manager, id=None, name=None, **kwargs):
     if not (name or id):
         raise exceptions.CommandError("either NAME or ID is required")
     if id:
-        return manager.get(id)
-    ls = manager.find(name=name)
+        return manager.get(id, **kwargs)
+    ls = manager.find(name=name, **kwargs)
     if len(ls) == 0:
         raise exceptions.CommandError("%s '%s' not found" %
                                       (manager.resource_class.resource_name,
@@ -272,7 +273,7 @@ def do_image_remove_tag(cs, args):
 # ~~~~~~~~
 # cluster-list
 #
-# cluster-show --name <cluster>|--id <cluster_id> [--json]
+# cluster-show --name <cluster>|--id <cluster_id> [--json] [--show-progress]
 #
 # cluster-create [--json <file>]
 #
@@ -296,13 +297,16 @@ def do_cluster_list(cs, args):
 @utils.arg('--id',
            metavar='<cluster_id>',
            help='ID of the cluster to show.')
+@utils.arg('--show-progress',
+           help='Show provision progress events of the cluster.')
 @utils.arg('--json',
            action='store_true',
            default=False,
            help='Print JSON representation of the cluster.')
 def do_cluster_show(cs, args):
     """Show details of a cluster."""
-    cluster = _get_by_id_or_name(cs.clusters, args.id, args.name)
+    cluster = _get_by_id_or_name(cs.clusters, args.id, args.name,
+                                 show_progress=args.show_progress)
     if args.json:
         print(json.dumps(cluster._info))
     else:
@@ -350,6 +354,8 @@ def do_cluster_delete(cs, args):
 # node-group-template-create [--json <file>]
 #
 # node-group-template-delete --name <template>|--id <template_id>
+#
+# node-group-template-update --name <template>|--id <template_id> --json <file>
 #
 
 def do_node_group_template_list(cs, args):
@@ -403,6 +409,36 @@ def do_node_group_template_delete(cs, args):
         _get_by_id_or_name(cs.node_group_templates, name=args.name).id
     )
     # TODO(mattf): No indication of result
+
+
+@utils.arg('--name',
+           help='Name of the node group template to update.')
+@utils.arg('--id',
+           metavar='<template_id>',
+           help='ID of the node group template to update')
+@utils.arg('--json',
+           default=sys.stdin,
+           type=argparse.FileType('r'),
+           help='JSON representation of the node group template update')
+def do_node_group_template_update(cs, args):
+    """Update a node group template."""
+    template = _get_by_id_or_name(cs.node_group_templates,
+                                  name=args.name,
+                                  id=args.id)
+    update_template = json.loads(args.json.read())
+    _filter_call_args(update_template, cs.node_group_templates.update)
+    for param in ["plugin_name", "hadoop_version", "name", "flavor_id"]:
+        if param not in update_template:
+            update_template[param] = getattr(template, param, None)
+
+    result = cs.node_group_templates.update(
+        args.id or
+        template._get_by_id_or_name(cs.node_group_templates,
+                                    name=args.name).id,
+        **update_template
+    )
+
+    _show_node_group_template(result)
 
 
 #
@@ -468,6 +504,35 @@ def do_cluster_template_delete(cs, args):
         args.id or _get_by_id_or_name(cs.cluster_templates, name=args.name).id
     )
     # TODO(mattf): No indication of result
+
+
+@utils.arg('--name',
+           help='Name of the cluster template to update.')
+@utils.arg('--id',
+           metavar='<template_id>',
+           help='Id of the cluster template to update.')
+@utils.arg('--json',
+           default=sys.stdin,
+           type=argparse.FileType('r'),
+           help='JSON representation of cluster template update.')
+def do_cluster_template_update(cs, args):
+    """Update a cluster template."""
+    template = _get_by_id_or_name(cs.cluster_templates,
+                                  name=args.name,
+                                  id=args.id)
+    update_template = json.loads(args.json.read())
+    _filter_call_args(update_template, cs.cluster_templates.update)
+    for param in ["name", "plugin_name", "hadoop_version"]:
+        if param not in update_template:
+            update_template[param] = getattr(template, param, None)
+
+    result = cs.cluster_templates.update(
+        args.id or
+        _get_by_id_or_name(cs.node_group_templates, name=args.name).id,
+        **update_template
+    )
+
+    _show_cluster_template(result)
 
 
 #
@@ -544,7 +609,7 @@ def do_data_source_delete(cs, args):
 # ~~~~~~~~~~~~~~~~~~~~
 # job-binary-data-list
 #
-# job-binary-data-create [--file <file>]
+# job-binary-data-create [--file <file>] [--name <name>]
 #
 # job-binary-data-delete --id <id>
 #
@@ -558,15 +623,23 @@ def do_job_binary_data_list(cs, args):
            default=sys.stdin,
            type=argparse.FileType('r'),
            help='Data to store.')
+@utils.arg('--name',
+           help="Name of the job binary internal.")
 def do_job_binary_data_create(cs, args):
     """Store data in the internal DB.
 
     Use 'swift upload' instead of this command.
     Use this command only if Swift is not available.
     """
+    if args.name:
+        name = args.name
+    elif args.file is not sys.stdin:
+        name = os.path.basename(args.file.name)
+    else:
+        name = datetime.datetime.now().strftime('d%Y%m%d%H%M%S')
     # Should be %F-%T except for type validation errors
     _show_job_binary_data((cs.job_binary_internals.create(
-        datetime.datetime.now().strftime('d%Y%m%d%H%M%S'),
+        name,
         args.file.read()),)
     )
 
@@ -797,31 +870,52 @@ def do_job_delete(cs, args):
     cs.job_executions.delete(args.id)
     # TODO(mattf): No indication of result
 
+
 #
-# Events
-# ~~~~~~~~
-# events-list --name <cluster>|--id <cluster_id>
-#             [--step <step_id>]
+# Job Types
+# ~~~~~~~~~
+# job-type-list [--type] [--plugin [--plugin-version]]
 #
 
+def _print_plugin_field(job_type):
 
-@utils.arg('--name',
-           metavar='<cluster_name>',
-           help='Name of the cluster to show events.')
-@utils.arg('--id',
-           metavar='<cluster_id>',
-           help='ID of the cluster to show events.')
-@utils.arg('--step',
-           metavar='<step_id>',
+    def plugin_version_string(plugin):
+        versions = ", ".join(plugin["versions"].keys())
+        if versions:
+            versions = "(" + versions + ")"
+        return plugin["name"] + versions
+
+    return ", ".join(map(lambda x: plugin_version_string(x), job_type.plugins))
+
+
+@utils.arg('--type',
+           metavar='<job_type>',
            default=None,
-           help='ID of provision step to show events.')
-def do_event_list(cs, args):
-    """Show events of a cluster."""
-    cluster = _get_by_id_or_name(cs.clusters, args.id, args.name)
-    if args.step:
-        events = cs.events.list(cluster.id, args.step)
-    else:
-        events = cs.events.list(cluster.id)
-    columns = ('node_group_id', 'instance_name',
-               'event_info', 'successful', 'step_id')
-    utils.print_list(events, columns)
+           help='Report only on this job type')
+@utils.arg('--plugin',
+           metavar='<plugin>',
+           default=None,
+           help='Report only job types supported by this plugin.')
+@utils.arg('--plugin-version',
+           metavar='<plugin_version>',
+           default=None,
+           help='Report only on job types supported by this version '
+           'of a specified plugin. Only valid with --plugin.')
+def do_job_type_list(cs, args):
+    """Show supported job types."""
+    search_opts = {}
+    if args.type:
+        search_opts["type"] = args.type
+    if args.plugin:
+        search_opts["plugin"] = args.plugin
+        if args.plugin_version:
+            search_opts["version"] = args.plugin_version
+    elif args.plugin_version:
+        raise exceptions.CommandError(
+            'The --plugin-version option is only valid when '
+            '--plugin is specified')
+
+    job_types = cs.job_types.list(search_opts)
+    columns = ('name', 'plugin(versions)')
+    utils.print_list(job_types, columns,
+                     {'plugin(versions)': _print_plugin_field})
