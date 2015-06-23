@@ -1,3 +1,10 @@
+python-saharaclient (0.9.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release:
+    - d/control: Align dependencies and versions with upstream.
+
+ -- James Page <james.page@ubuntu.com>  Tue, 23 Jun 2015 11:43:22 +0100
+
 python-saharaclient (0.8.0-1) unstable; urgency=medium
 
   * New upstream release.
