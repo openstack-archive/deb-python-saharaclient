@@ -1,3 +1,10 @@
+python-saharaclient (0.9.1-2) experimental; urgency=medium
+
+  * New upstream release.
+  * Fixed (build-)depends for this release.
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 07 Sep 2015 14:15:42 +0200
+
 python-saharaclient (0.9.1-1) experimental; urgency=medium
 
   * Team upload.
