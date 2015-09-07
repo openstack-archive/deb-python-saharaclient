@@ -1,4 +1,4 @@
-python-saharaclient (0.9.1-2) experimental; urgency=medium
+python-saharaclient (0.10.1-1) experimental; urgency=medium
 
   * New upstream release.
   * Fixed (build-)depends for this release.
