@@ -65,7 +65,8 @@ class JobTest(base.BaseTestCase):
             "job_config": {
                 "args": [],
                 "configs": []
-            }
+            },
+            "interface": []
         }
         self.responses.get(url, json=response)
 

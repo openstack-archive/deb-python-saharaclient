@@ -23,12 +23,13 @@ class JobExecutionTest(base.BaseTestCase):
         'job_id': 'job_id',
         'cluster_id': 'cluster_id',
         'configs': {},
+        'interface': {},
         'input_id': None,
         'output_id': None
     }
     response = {
         'cluster_id': 'cluster_id',
-        'job_configs': {},
+        'job_configs': {}
     }
 
     def test_create_job_execution_with_io(self):

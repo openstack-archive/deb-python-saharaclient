@@ -116,7 +116,7 @@ def _get_by_id_or_name(manager, id=None, name=None, **kwargs):
         raise exceptions.CommandError("either NAME or ID is required")
     if id:
         return manager.get(id, **kwargs)
-    ls = manager.find(name=name, **kwargs)
+    ls = manager.find(name=name)
     if len(ls) == 0:
         raise exceptions.CommandError("%s '%s' not found" %
                                       (manager.resource_class.resource_name,
@@ -125,7 +125,7 @@ def _get_by_id_or_name(manager, id=None, name=None, **kwargs):
         raise exceptions.CommandError("%s '%s' not unique, try by ID" %
                                       (manager.resource_class.resource_name,
                                        name))
-    return ls[0]
+    return manager.get(ls[0].id, **kwargs)
 
 
 #
@@ -277,7 +277,7 @@ def do_image_remove_tag(cs, args):
 #
 # cluster-create [--json <file>]
 #
-# TODO(mattf): cluster-scale
+# cluster-scale --name <cluster>|--id <cluster_id> [--json <file>]
 #
 # cluster-delete --name <cluster>|--id <cluster_id>
 #
@@ -317,6 +317,10 @@ def do_cluster_show(cs, args):
            default=sys.stdin,
            type=argparse.FileType('r'),
            help='JSON representation of cluster.')
+@utils.arg('--count',
+           default=1,
+           type=int,
+           help='Number of clusters to be created.')
 def do_cluster_create(cs, args):
     """Create a cluster."""
     # TODO(mattf): improve template validation, e.g. template w/o name key
@@ -326,9 +330,26 @@ def do_cluster_create(cs, args):
     # create w/ **template. It may be desirable to simple change
     # clusters.create in the future.
     remap = {'neutron_management_network': 'net_id'}
+    template['count'] = args.count
     _filter_call_args(template, cs.clusters.create, remap)
 
     _show_cluster(cs.clusters.create(**template))
+
+
+@utils.arg('--name',
+           help='Name of the cluster.')
+@utils.arg('--id',
+           metavar='<cluster_id>',
+           help='ID of the cluster.')
+@utils.arg('--json',
+           default=sys.stdin,
+           type=argparse.FileType('r'),
+           help='JSON representation of cluster scale.')
+def do_cluster_scale(cs, args):
+    """Scale a cluster """
+    cluster_id = args.id or _get_by_id_or_name(cs.clusters, name=args.name).id
+    scale_template = json.loads(args.json.read())
+    _show_cluster(cs.clusters.scale(cluster_id, **scale_template))
 
 
 @utils.arg('--name',
@@ -604,6 +625,24 @@ def do_data_source_delete(cs, args):
     # TODO(mattf): No indication of result
 
 
+@utils.arg('--name',
+           help="Name of the data source to update.")
+@utils.arg('--id',
+           help="ID of the data source to update.")
+@utils.arg('--json',
+           default=sys.stdin,
+           type=argparse.FileType('r'),
+           help='JSON containing the data source fields to update.')
+def do_data_source_update(cs, args):
+    """Update a data source."""
+    update_data = json.loads(args.json.read())
+    result = cs.data_sources.update(
+        args.id or _get_by_id_or_name(cs.data_sources, name=args.name).id,
+        update_data
+    )
+    _show_data_source(result)
+
+
 #
 # Job Binary Internals
 # ~~~~~~~~~~~~~~~~~~~~
@@ -723,6 +762,27 @@ def do_job_binary_delete(cs, args):
     # TODO(mattf): No indication of result
 
 
+@utils.arg('--name',
+           help='Name of the job binary to update.')
+@utils.arg('--id',
+           metavar='<job_binary_id>',
+           help='Id of the job binary to update.')
+@utils.arg('--json',
+           default=sys.stdin,
+           type=argparse.FileType('r'),
+           help='JSON representation of job binary update.')
+def do_job_binary_update(cs, args):
+    """Update a job binary."""
+    update_data = json.loads(args.json.read())
+    result = cs.job_binaries.update(
+        args.id or
+        _get_by_id_or_name(cs.job_binaries, name=args.name).id,
+        update_data
+    )
+
+    _show_job_binary(result)
+
+
 #
 # Jobs
 # ~~~~
@@ -756,10 +816,8 @@ def do_job_template_show(cs, args):
 
 
 @utils.arg('--name',
-           required=True,
            help='Name of the job template.')
 @utils.arg('--type',
-           required=True,
            help='Type of the job template.')
 @utils.arg('--main',
            action='append',
@@ -772,11 +830,28 @@ def do_job_template_show(cs, args):
 @utils.arg('--description',
            default='',
            help='Description of the job template.')
+@utils.arg('--json',
+           default=None,
+           type=argparse.FileType('r'),
+           help='JSON representation of job template.')
 def do_job_template_create(cs, args):
     """Create a job template."""
-    _show_job_template(cs.jobs.create(args.name, args.type,
-                                      args.main, args.lib,
-                                      args.description))
+    template = json.loads(args.json.read()) if args.json else {}
+    _filter_call_args(template, cs.jobs.create)
+    template = {
+        "name": args.name or template.get("name") or None,
+        "type": args.type or template.get("type") or None,
+        "mains": args.main or template.get("mains") or [],
+        "libs": args.lib or template.get("libs") or [],
+        "description": args.description or template.get("description") or '',
+        "interface": template.get("interface") or []
+    }
+    if not template["name"]:
+        raise Exception("name is required")
+    if not template["type"]:
+        raise Exception("type is required")
+
+    _show_job_template(cs.jobs.create(**template))
 
 
 @utils.arg('--name',
@@ -814,8 +889,8 @@ def do_job_list(cs, args):
         # why is status in info.status?
         job.status = job.info['status']
     # TODO(mattf): why can cluster_id be None?
-    columns = ('id', 'cluster_id', 'status')
-    utils.print_list(jobs, columns)
+    columns = ('id', 'cluster_id', 'start_time', 'status')
+    utils.print_list(jobs, columns, sortby_index=2)
 
 
 @utils.arg('--id',
@@ -830,7 +905,7 @@ def do_job_show(cs, args):
            required=True,
            help='ID of the job template to run.')
 @utils.arg('--cluster',
-           required=True,
+           required=False,
            help='ID of the cluster to run the job in.')
 @utils.arg('--input-data',
            default=None,
@@ -852,14 +927,30 @@ def do_job_show(cs, args):
            action='append',
            default=[],
            help='Config parameters to add to the job, repeatable.')
+@utils.arg('--json',
+           default=None,
+           type=argparse.FileType('r'),
+           help='JSON representation of the job.')
 def do_job_create(cs, args):
     """Create a job."""
+    job = json.loads(args.json.read()) if args.json else {}
+    remap = {"job_configs": "configs"}
+    _filter_call_args(job, cs.job_executions.create, remap)
     _convert = lambda ls: dict(map(lambda i: i.split('=', 1), ls))
-    _show_job(cs.job_executions.create(args.job_template, args.cluster,
-                                       args.input_data, args.output_data,
-                                       {'params': _convert(args.param),
-                                        'args': args.arg,
-                                        'configs': _convert(args.config)}))
+    job = {
+        "cluster_id": args.cluster or job.get("cluster_id") or None,
+        "input_id": args.input_data or job.get("input_id") or None,
+        "output_id": args.output_data or job.get("output_id") or None,
+        "interface": job.get("interface") or [],
+        "configs": job.get("configs") or {}
+    }
+    if any((args.config, args.param, args.arg)):
+        job["configs"] = {"configs": _convert(args.config),
+                          "args": args.arg,
+                          "params": _convert(args.param)}
+    if not job["cluster_id"]:
+        raise Exception("cluster is required")
+    _show_job(cs.job_executions.create(args.job_template, **job))
 
 
 @utils.arg('--id',
