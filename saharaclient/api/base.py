@@ -119,6 +119,24 @@ class ResourceManager(object):
             data = get_json(resp)[response_key]
         else:
             data = get_json(resp)
+
+        return self.resource_class(self, data)
+
+    def _patch(self, url, data, response_key=None, dump_json=True):
+        if dump_json:
+            kwargs = {'json': data}
+        else:
+            kwargs = {'data': data}
+
+        resp = self.api.patch(url, **kwargs)
+
+        if resp.status_code != 202:
+            self._raise_api_exception(resp)
+        if response_key is not None:
+            data = get_json(resp)[response_key]
+        else:
+            data = get_json(resp)
+
         return self.resource_class(self, data)
 
     def _list(self, url, response_key):
@@ -187,7 +205,7 @@ class APIException(Exception):
 def get_query_string(search_opts):
     if search_opts:
         qparams = sorted(search_opts.items(), key=lambda x: x[0])
-        query_string = "?%s" % parse.urlencode(qparams)
+        query_string = "?%s" % parse.urlencode(qparams, doseq=True)
     else:
         query_string = ""
     return query_string
