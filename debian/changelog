@@ -1,4 +1,4 @@
-python-saharaclient (0.11.0-1) UNRELEASED; urgency=medium
+python-saharaclient (0.11.0-1) experimental; urgency=medium
 
   * New upstream release.
   * d/control: Align dependencies and versions with upstream.
