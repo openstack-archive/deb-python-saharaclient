@@ -1,0 +1,29 @@
+From 7da54874704ce1086086c93bc4096fcded590959 Mon Sep 17 00:00:00 2001
+From: Steve Martinelli <stevemar@ca.ibm.com>
+Date: Mon, 21 Sep 2015 13:25:12 -0400
+Subject: [PATCH] Remove `data source update` from setup.cfg
+
+Looks like this was added prematurely, as this entry point does
+not point to any class.
+
+Change-Id: I67c2d7a6be76a8a7be0e386419b69ca0ad8064d1
+Closes-Bug: #1498038
+---
+ setup.cfg | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/setup.cfg b/setup.cfg
+index 6d3d32b..da71acd 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -43,7 +43,6 @@ openstack.data_processing.v1 =
+     dataprocessing_data_source_create = saharaclient.osc.v1.data_sources:CreateDataSource
+     dataprocessing_data_source_list = saharaclient.osc.v1.data_sources:ListDataSources
+     dataprocessing_data_source_show = saharaclient.osc.v1.data_sources:ShowDataSource
+-    dataprocessing_data_source_update = saharaclient.osc.v1.data_sources:UpdateDataSource
+     dataprocessing_data_source_delete = saharaclient.osc.v1.data_sources:DeleteDataSource
+ 
+ [build_sphinx]
+-- 
+2.6.2
+
