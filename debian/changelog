@@ -1,6 +1,7 @@
 python-saharaclient (0.12.0-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * d/control: Align (Build-)Depends with usptream.
 
  -- Corey Bryant <corey.bryant@canonical.com>  Mon, 29 Feb 2016 09:30:09 -0500
 
