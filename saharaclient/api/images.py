@@ -25,24 +25,32 @@ class ImageManager(base.ResourceManager):
     resource_class = Image
 
     def list(self, search_opts=None):
+        """Get a list of registered images."""
         query = base.get_query_string(search_opts)
         return self._list('/images%s' % query, 'images')
 
     def get(self, id):
+        """Get information about an image"""
         return self._get('/images/%s' % id, 'image')
 
     def unregister_image(self, image_id):
+        """Remove an Image from Sahara Image Registry."""
         self._delete('/images/%s' % image_id)
 
-    def update_image(self, image_id, user_name, desc):
-        body = {"username": user_name,
+    def update_image(self, image_id, user_name, desc=None):
+        """Create or update an Image in Image Registry."""
+        desc = desc if desc else ''
+        data = {"username": user_name,
                 "description": desc}
 
-        resp = self.api.post('/images/%s' % image_id, json=body)
-        if resp.status_code != 202:
-            raise RuntimeError('Failed to register image %s' % image_id)
+        return self._post('/images/%s' % image_id, data)
 
     def update_tags(self, image_id, new_tags):
+        """Update an Image tags.
+
+        :param list new_tags: list of tags that will replace currently
+                              assigned tags
+        """
         old_image = self.get(image_id)
 
         old_tags = frozenset(old_image.tags)
@@ -51,17 +59,14 @@ class ImageManager(base.ResourceManager):
         to_add = list(new_tags - old_tags)
         to_remove = list(old_tags - new_tags)
 
-        if len(to_add) != 0:
-            resp = self.api.post('/images/%s/tag' % image_id,
-                                 json={'tags': to_add})
+        add_response, remove_response = None, None
 
-            if resp.status_code != 202:
-                raise RuntimeError('Failed to add tags to image %s' % image_id)
+        if to_add:
+            add_response = self._post('/images/%s/tag' % image_id,
+                                      {'tags': to_add}, 'image')
 
-        if len(to_remove) != 0:
-            resp = self.api.post('/images/%s/untag' % image_id,
-                                 json={'tags': to_remove})
+        if to_remove:
+            remove_response = self._post('/images/%s/untag' % image_id,
+                                         {'tags': to_remove}, 'image')
 
-            if resp.status_code != 202:
-                raise RuntimeError('Failed to remove tags from image %s' %
-                                   image_id)
+        return remove_response or add_response or self.get(image_id)

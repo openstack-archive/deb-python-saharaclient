@@ -64,6 +64,12 @@ def _check_items(obj, searches):
         return False
 
 
+class NotUpdated(object):
+    """A sentinel class to signal that parameter should not be updated."""
+    def __repr__(self):
+        return 'NotUpdated'
+
+
 class ResourceManager(object):
     resource_class = None
 
@@ -86,6 +92,11 @@ class ResourceManager(object):
     def _copy_if_defined(self, data, **kwargs):
         for var_name, var_value in six.iteritems(kwargs):
             if var_value is not None:
+                data[var_name] = var_value
+
+    def _copy_if_updated(self, data, **kwargs):
+        for var_name, var_value in six.iteritems(kwargs):
+            if not isinstance(var_value, NotUpdated):
                 data[var_name] = var_value
 
     def _create(self, url, data, response_key=None, dump_json=True):
@@ -139,6 +150,24 @@ class ResourceManager(object):
 
         return self.resource_class(self, data)
 
+    def _post(self, url, data, response_key=None, dump_json=True):
+        if dump_json:
+            kwargs = {'json': data}
+        else:
+            kwargs = {'data': data}
+
+        resp = self.api.post(url, **kwargs)
+
+        if resp.status_code != 202:
+            self._raise_api_exception(resp)
+
+        if response_key is not None:
+            data = get_json(resp)[response_key]
+        else:
+            data = get_json(resp)
+
+        return self.resource_class(self, data)
+
     def _list(self, url, response_key):
         resp = self.api.get(url)
         if resp.status_code == 200:
@@ -174,10 +203,10 @@ class ResourceManager(object):
         try:
             error_data = get_json(resp)
         except Exception:
+            msg = _("Failed to parse response from Sahara: %s") % resp.reason
             raise APIException(
                 error_code=resp.status_code,
-                error_message=_("Failed to parse response from Sahara. Check "
-                                "if service catalog configured properly."))
+                error_message=msg)
 
         raise APIException(error_code=error_data.get("error_code"),
                            error_name=error_data.get("error_name"),

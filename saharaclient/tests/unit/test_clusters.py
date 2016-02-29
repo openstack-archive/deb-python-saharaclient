@@ -42,6 +42,14 @@ class ClusterTest(base.BaseTestCase):
         "provision_progress": []
     }
 
+    test_shares = [
+        {
+            "id": "bd71d2d5-60a0-4ed9-a3d2-ad312c368880",
+            "path": "/mnt/manila",
+            "access_level": "rw"
+        }
+    ]
+
     def test_create_cluster_with_template(self,):
         url = self.URL + '/clusters'
         self.responses.post(url, status_code=202, json={'cluster': self.body})
@@ -159,8 +167,46 @@ class ClusterTest(base.BaseTestCase):
 
         self.responses.patch(url, status_code=202, json=update_body)
 
+        # check that all parameters will be updated
         resp = self.client.clusters.update('id', name='new_name',
                                            description='descr')
+
+        self.assertEqual(url, self.responses.last_request.url)
+        self.assertIsInstance(resp, cl.Cluster)
+        self.assertEqual(update_body,
+                         json.loads(self.responses.last_request.body))
+
+        # check that parameters will not be updated
+        self.client.clusters.update("id")
+        self.assertEqual(url, self.responses.last_request.url)
+        self.assertEqual({},
+                         json.loads(self.responses.last_request.body))
+
+        # check that all parameters will be unset
+        unset_json = {
+            "name": None, "description": None, "is_public": None,
+            "is_protected": None, "shares": None
+        }
+
+        self.client.clusters.update("id", **unset_json)
+        self.assertEqual(url, self.responses.last_request.url)
+        self.assertEqual(unset_json,
+                         json.loads(self.responses.last_request.body))
+
+    def test_clusters_update_share(self):
+        url = self.URL + '/clusters/id'
+
+        update_body = {
+            'name': 'new_name',
+            'description': 'descr',
+            'shares': self.test_shares
+        }
+
+        self.responses.patch(url, status_code=202, json=update_body)
+
+        resp = self.client.clusters.update('id', name='new_name',
+                                           description='descr',
+                                           shares=self.test_shares)
 
         self.assertEqual(url, self.responses.last_request.url)
         self.assertIsInstance(resp, cl.Cluster)

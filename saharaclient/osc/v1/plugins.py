@@ -14,13 +14,16 @@
 # limitations under the License.
 
 from os import path
+import sys
 
 from cliff import command
 from cliff import lister
 from cliff import show
-from openstackclient.common import utils
+from openstackclient.common import utils as osc_utils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+
+from saharaclient.osc.v1 import utils
 
 
 class ListPlugins(lister.Lister):
@@ -46,19 +49,19 @@ class ListPlugins(lister.Lister):
 
         if parsed_args.long:
             columns = ('name', 'title', 'versions', 'description')
-            column_headers = [c.capitalize() for c in columns]
+            column_headers = utils.prepare_column_headers(columns)
 
         else:
             columns = ('name', 'versions')
-            column_headers = [c.capitalize() for c in columns]
+            column_headers = utils.prepare_column_headers(columns)
 
         return (
             column_headers,
-            (utils.get_item_properties(
+            (osc_utils.get_item_properties(
                 s,
                 columns,
                 formatters={
-                    'versions': utils.format_list
+                    'versions': osc_utils.format_list
                 },
             ) for s in data)
         )
@@ -76,6 +79,10 @@ class ShowPlugin(show.ShowOne):
             metavar="<plugin>",
             help="Name of the plugin to display",
         )
+        parser.add_argument(
+            "--version",
+            help='Version of the plugin to display'
+        )
 
         return parser
 
@@ -83,10 +90,30 @@ class ShowPlugin(show.ShowOne):
         self.log.debug("take_action(%s)" % parsed_args)
         client = self.app.client_manager.data_processing
 
-        data = client.plugins.get(parsed_args.plugin).to_dict()
-        data['versions'] = utils.format_list(data['versions'])
+        if parsed_args.version:
+            data = client.plugins.get_version_details(
+                parsed_args.plugin, parsed_args.version).to_dict()
 
-        return self.dict2columns(data)
+            processes = data.pop('node_processes')
+            for k, v in processes.items():
+                processes[k] = osc_utils.format_list(v)
+            data['required_image_tags'] = osc_utils.format_list(
+                data['required_image_tags'])
+
+            data = utils.prepare_data(
+                data, ['required_image_tags', 'name', 'description', 'title'])
+
+            data = zip(*sorted(data.items()) + [('', ''), (
+                'Service:', 'Available processes:'), ('', '')] + sorted(
+                processes.items()))
+        else:
+            data = client.plugins.get(parsed_args.plugin).to_dict()
+            data['versions'] = osc_utils.format_list(data['versions'])
+            data = utils.prepare_data(
+                data, ['versions', 'name', 'description', 'title'])
+            data = self.dict2columns(data)
+
+        return data
 
 
 class GetPluginConfigs(command.Command):
@@ -129,7 +156,7 @@ class GetPluginConfigs(command.Command):
         else:
             with open(parsed_args.file, 'w') as f:
                 jsonutils.dump(data, f, indent=4)
-                self.log.info(
-                    '"%(plugin)s" plugin configs was saved in "%(file)s"'
-                    'file' % {'plugin': parsed_args.plugin,
-                              'file': parsed_args.file})
+            sys.stdout.write(
+                '"%(plugin)s" plugin configs was saved in "%(file)s"'
+                'file' % {'plugin': parsed_args.plugin,
+                          'file': parsed_args.file})

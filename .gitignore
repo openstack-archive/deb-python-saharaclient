@@ -10,7 +10,6 @@ sdist
 develop-eggs
 .installed.cfg
 pip-log.txt
-.coverage
 .tox
 *.mo
 .mr.developer.cfg
@@ -36,3 +35,6 @@ doc/html
 doc/source/apidoc
 doc/source/api
 doc/build
+*.log
+# Files created by releasenotes build
+releasenotes/build

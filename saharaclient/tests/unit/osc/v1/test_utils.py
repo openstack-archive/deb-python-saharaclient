@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from openstackclient.common import exceptions
+import mock
 
 from saharaclient.osc.v1 import utils
 from saharaclient.tests.unit import base
@@ -36,41 +36,55 @@ class TestUtils(base.BaseTestCase):
         expected_data = {'Name of res': 'name'}
         self.assertEqual(expected_data, utils.prepare_data(data, fields))
 
-    def test_get_resource_id(self):
-        class TestResource(object):
-            def __init__(self, id):
-                self.id = id
-
-        class TestManager(object):
-
-            resource_class = TestResource
-
-            def get(self, id):
-                if id == 'id':
-                    return TestResource('from_id')
-                else:
-                    raise
-
-            def find(self, name):
-                if name == 'name':
-                    return [TestResource('from_name')]
-                if name == 'null':
-                    return []
-                if name == 'mult':
-                    return [TestResource('1'), TestResource('2')]
+    def test_get_resource(self):
+        manager = mock.Mock()
 
         # check case when resource id is passed
-        self.assertEqual('from_id', utils.get_resource(
-            TestManager(), 'id').id)
+        uuid = '82065b4d-2c79-420d-adc3-310de275e922'
+        utils.get_resource(manager, uuid)
+        manager.get.assert_called_once_with(uuid)
 
         # check case when resource name is passed
-        self.assertEqual('from_name', utils.get_resource(
-            TestManager(), 'name').id)
+        utils.get_resource(manager, 'name')
+        manager.find_unique.assert_called_once_with(name='name')
 
-        # check that error is raised when resource doesn't exists
-        self.assertRaises(exceptions.CommandError, utils.get_resource,
-                          TestManager(), 'null')
+    def test_get_resource_id(self):
+        manager = mock.Mock()
 
-        # check that error is raised when multiple resources choice
-        self.assertRaises(exceptions.CommandError, utils.get_resource,
-                          TestManager(), 'mult')
+        uuid = '82065b4d-2c79-420d-adc3-310de275e922'
+        manager.find_unique.return_value = mock.Mock(id=uuid)
+
+        # check case when resource id is passed
+        res = utils.get_resource_id(manager, uuid)
+        self.assertEqual(uuid, res)
+        manager.get.assert_not_called()
+        manager.find_unique.assert_not_called()
+
+        # check case when resource name is passed
+        res = utils.get_resource_id(manager, 'name')
+        manager.find_unique.assert_called_once_with(name='name')
+        self.assertEqual(uuid, res)
+
+    def test_create_dict_from_kwargs(self):
+        dict1 = utils.create_dict_from_kwargs(first='1', second=2)
+        self.assertEqual({'first': '1', 'second': 2}, dict1)
+
+        dict2 = utils.create_dict_from_kwargs(first='1', second=None)
+        self.assertEqual({'first': '1'}, dict2)
+
+        dict3 = utils.create_dict_from_kwargs(first='1', second=False)
+        self.assertEqual({'first': '1', 'second': False}, dict3)
+
+    def test_prepare_column_headers(self):
+        columns1 = ['first', 'second_column']
+        self.assertEqual(
+            ['First', 'Second column'], utils.prepare_column_headers(columns1))
+
+        columns2 = ['First', 'Second column']
+        self.assertEqual(
+            ['First', 'Second column'], utils.prepare_column_headers(columns2))
+
+        columns3 = ['first', 'second_column']
+        self.assertEqual(
+            ['First', 'Second'], utils.prepare_column_headers(
+                columns3, remap={'second_column': 'second'}))

@@ -24,6 +24,7 @@ class Cluster(base.Resource):
 
 class ClusterManager(base.ResourceManager):
     resource_class = Cluster
+    NotUpdated = base.NotUpdated()
 
     def create(self, name, plugin_name, hadoop_version,
                cluster_template_id=None, default_image_id=None,
@@ -32,6 +33,7 @@ class ClusterManager(base.ResourceManager):
                anti_affinity=None, net_id=None, count=None,
                use_autoconfig=None, shares=None,
                is_public=None, is_protected=None):
+        """Launch a Cluster."""
 
         data = {
             'name': name,
@@ -67,13 +69,44 @@ class ClusterManager(base.ResourceManager):
         return self._create('/clusters', data, 'cluster')
 
     def scale(self, cluster_id, scale_object):
+        """Scale an existing Cluster.
+
+        :param scale_object: dict that describes scaling operation
+
+        :Example:
+
+        The following `scale_object` can be used to change the number of
+        instances in the node group and add instances of new node group to
+        existing cluster:
+
+        .. sourcecode:: json
+
+            {
+                "add_node_groups": [
+                    {
+                        "count": 3,
+                        "name": "new_ng",
+                        "node_group_template_id": "ngt_id"
+                    }
+                ],
+                "resize_node_groups": [
+                    {
+                        "count": 2,
+                        "name": "old_ng"
+                    }
+                ]
+            }
+
+        """
         return self._update('/clusters/%s' % cluster_id, scale_object)
 
     def list(self, search_opts=None):
+        """Get a list of Clusters."""
         query = base.get_query_string(search_opts)
         return self._list('/clusters%s' % query, 'clusters')
 
     def get(self, cluster_id, show_progress=False):
+        """Get information about a Cluster."""
         url = ('/clusters/%(cluster_id)s?%(params)s' %
                {"cluster_id": cluster_id,
                 "params": parse.urlencode({"show_progress": show_progress})})
@@ -81,13 +114,17 @@ class ClusterManager(base.ResourceManager):
         return self._get(url, 'cluster')
 
     def delete(self, cluster_id):
+        """Delete a Cluster."""
         self._delete('/clusters/%s' % cluster_id)
 
-    def update(self, cluster_id, name=None, description=None, is_public=None,
-               is_protected=None):
+    def update(self, cluster_id, name=NotUpdated, description=NotUpdated,
+               is_public=NotUpdated, is_protected=NotUpdated,
+               shares=NotUpdated):
+        """Update a Cluster."""
 
         data = {}
-        self._copy_if_defined(data, name=name, description=description,
-                              is_public=is_public, is_protected=is_protected)
+        self._copy_if_updated(data, name=name, description=description,
+                              is_public=is_public, is_protected=is_protected,
+                              shares=shares)
 
         return self._patch('/clusters/%s' % cluster_id, data)

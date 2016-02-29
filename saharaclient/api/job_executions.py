@@ -22,46 +22,41 @@ class JobExecution(base.Resource):
 
 class JobExecutionsManager(base.ResourceManager):
     resource_class = JobExecution
+    NotUpdated = base.NotUpdated()
 
     def list(self, search_opts=None):
+        """Get a list of Job Executions."""
         query = base.get_query_string(search_opts)
         return self._list('/job-executions%s' % query, 'job_executions')
 
     def get(self, obj_id):
+        """Get information about a Job Execution."""
         return self._get('/job-executions/%s' % obj_id, 'job_execution')
 
     def delete(self, obj_id):
+        """Delete a Job Execution."""
         self._delete('/job-executions/%s' % obj_id)
 
-    def create(self, job_id, cluster_id, input_id,
-               output_id, configs, interface=None, is_public=None,
+    def create(self, job_id, cluster_id, input_id=None,
+               output_id=None, configs=None, interface=None, is_public=None,
                is_protected=None):
+        """Launch a Job."""
 
         url = "/jobs/%s/execute" % job_id
         data = {
             "cluster_id": cluster_id,
-            "job_configs": configs,
         }
 
-        if interface:
-            data['interface'] = interface
-
-        # Leave these out if they are null.  For Java job types they
-        # are not part of the schema
-        io_ids = (("input_id", input_id),
-                  ("output_id", output_id))
-        for key, value in io_ids:
-            if value is not None:
-                data.update({key: value})
-
-        self._copy_if_defined(data, is_public=is_public,
-                              is_protected=is_protected)
+        self._copy_if_defined(data, input_id=input_id, output_id=output_id,
+                              job_configs=configs, interface=interface,
+                              is_public=is_public, is_protected=is_protected)
 
         return self._create(url, data, 'job_execution')
 
-    def update(self, obj_id, is_public=None, is_protected=None):
+    def update(self, obj_id, is_public=NotUpdated, is_protected=NotUpdated):
+        """Update a Job Execution."""
 
         data = {}
-        self._copy_if_defined(data, is_public=is_public,
+        self._copy_if_updated(data, is_public=is_public,
                               is_protected=is_protected)
         return self._patch('/job-executions/%s' % obj_id, data)

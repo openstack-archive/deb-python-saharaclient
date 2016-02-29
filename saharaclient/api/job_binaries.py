@@ -23,31 +23,34 @@ class JobBinaries(base.Resource):
 class JobBinariesManager(base.ResourceManager):
     resource_class = JobBinaries
 
-    def create(self, name, url, description, extra, is_public=None,
+    def create(self, name, url, description=None, extra=None, is_public=None,
                is_protected=None):
+        """Create a Job Binary."""
         data = {
             "name": name,
-            "url": url,
-            "description": description,
-            "extra": extra
+            "url": url
         }
 
-        self._copy_if_defined(data, is_public=is_public,
-                              is_protected=is_protected)
+        self._copy_if_defined(data, description=description, extra=extra,
+                              is_public=is_public, is_protected=is_protected)
 
         return self._create('/job-binaries', data, 'job_binary')
 
     def list(self, search_opts=None):
+        """Get a list of Job Binaries."""
         query = base.get_query_string(search_opts)
         return self._list('/job-binaries%s' % query, 'binaries')
 
     def get(self, job_binary_id):
+        """Get information about a Job Binary."""
         return self._get('/job-binaries/%s' % job_binary_id, 'job_binary')
 
     def delete(self, job_binary_id):
+        """Delete a Job Binary."""
         self._delete('/job-binaries/%s' % job_binary_id)
 
     def get_file(self, job_binary_id):
+        """Download a Job Binary."""
         resp = self.api.get('/job-binaries/%s/data' % job_binary_id)
 
         if resp.status_code != 200:
@@ -55,5 +58,19 @@ class JobBinariesManager(base.ResourceManager):
         return resp.content
 
     def update(self, job_binary_id, data):
+        """Update Job Binary.
+
+        :param dict data: dict that contains fields that should be updated
+                     with new values.
+
+        Fields that can be updated:
+
+        * name
+        * description
+        * url
+        * is_public
+        * is_protected
+        * extra - dict with `user` and `password` keyword arguments
+        """
         return self._update(
             '/job-binaries/%s' % job_binary_id, data, 'job_binary')

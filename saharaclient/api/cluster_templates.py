@@ -22,11 +22,13 @@ class ClusterTemplate(base.Resource):
 
 class ClusterTemplateManager(base.ResourceManager):
     resource_class = ClusterTemplate
+    NotUpdated = base.NotUpdated()
 
     def create(self, name, plugin_name, hadoop_version, description=None,
                cluster_configs=None, node_groups=None, anti_affinity=None,
                net_id=None, default_image_id=None, use_autoconfig=None,
                shares=None, is_public=None, is_protected=None):
+        """Create a Cluster Template."""
 
         data = {
             'name': name,
@@ -48,14 +50,17 @@ class ClusterTemplateManager(base.ResourceManager):
 
         return self._create('/cluster-templates', data, 'cluster_template')
 
-    def update(self, cluster_template_id, name=None, plugin_name=None,
-               hadoop_version=None, description=None, cluster_configs=None,
-               node_groups=None, anti_affinity=None, net_id=None,
-               default_image_id=None, use_autoconfig=None, shares=None,
-               is_public=None, is_protected=None):
+    def update(self, cluster_template_id, name=NotUpdated,
+               plugin_name=NotUpdated, hadoop_version=NotUpdated,
+               description=NotUpdated, cluster_configs=NotUpdated,
+               node_groups=NotUpdated, anti_affinity=NotUpdated,
+               net_id=NotUpdated, default_image_id=NotUpdated,
+               use_autoconfig=NotUpdated, shares=NotUpdated,
+               is_public=NotUpdated, is_protected=NotUpdated):
+        """Update a Cluster Template."""
 
         data = {}
-        self._copy_if_defined(data, name=name,
+        self._copy_if_updated(data, name=name,
                               plugin_name=plugin_name,
                               hadoop_version=hadoop_version,
                               description=description,
@@ -73,12 +78,15 @@ class ClusterTemplateManager(base.ResourceManager):
                             data, 'cluster_template')
 
     def list(self, search_opts=None):
+        """Get list of Cluster Templates."""
         query = base.get_query_string(search_opts)
         return self._list('/cluster-templates%s' % query, 'cluster_templates')
 
     def get(self, cluster_template_id):
+        """Get information about a Cluster Template."""
         return self._get('/cluster-templates/%s' % cluster_template_id,
                          'cluster_template')
 
     def delete(self, cluster_template_id):
+        """Delete a Cluster Template."""
         self._delete('/cluster-templates/%s' % cluster_template_id)

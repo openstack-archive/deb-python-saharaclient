@@ -27,6 +27,7 @@ import argparse
 import getpass
 import logging
 import sys
+import warnings
 
 import six
 
@@ -47,10 +48,10 @@ try:
 except ImportError:
     pass
 
-from keystoneclient.auth.identity.generic import password
-from keystoneclient.auth.identity.generic import token
+from keystoneauth1.identity.generic import password
+from keystoneauth1.identity.generic import token
+from keystoneauth1.loading import session
 from keystoneclient.auth.identity import v3 as identity
-from keystoneclient import session
 from oslo_utils import encodeutils
 from oslo_utils import strutils
 
@@ -353,8 +354,8 @@ class OpenStackSaharaShell(object):
                             default=cliutils.env('OS_AUTH_TOKEN'),
                             help='Defaults to env[OS_AUTH_TOKEN].')
 
-        # Use Keystoneclient API to parse authentication arguments
-        session.Session.register_cli_options(parser)
+        # Use Keystoneclient/Keystoneauth API to parse authentication arguments
+        session.Session().register_argparse_arguments(parser)
         identity.Password.register_argparse_arguments(parser)
 
         return parser
@@ -622,8 +623,8 @@ class OpenStackSaharaShell(object):
             project_id = args.os_project_id or args.os_tenant_id
             project_name = args.os_project_name or args.os_tenant_name
 
-            keystone_session = (session.Session.
-                                load_from_cli_options(args))
+            keystone_session = (session.Session().
+                                load_from_argparse_arguments(args))
             keystone_auth = self._get_keystone_auth(
                 keystone_session,
                 args.os_auth_url,
@@ -710,9 +711,15 @@ class OpenStackHelpFormatter(argparse.HelpFormatter):
 
 
 def main():
+    warnings.simplefilter('once', category=DeprecationWarning)
+    warnings.warn('The sahara CLI is deprecated in favor of OpenStackClient '
+                  'plugin and will not be maintained anymore. '
+                  'For a Python library, continue using python-saharaclient.',
+                  DeprecationWarning)
+    warnings.resetwarnings()
     try:
-        OpenStackSaharaShell().main(map(encodeutils.safe_decode,
-                                        sys.argv[1:]))
+        argv = [encodeutils.safe_decode(a) for a in sys.argv[1:]]
+        OpenStackSaharaShell().main(argv)
 
     except Exception as e:
         logger.debug(e, exc_info=1)

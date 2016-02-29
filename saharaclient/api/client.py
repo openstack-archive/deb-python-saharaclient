@@ -15,13 +15,12 @@
 
 import warnings
 
-from keystoneclient import adapter
-from keystoneclient.auth.identity import v2
-from keystoneclient.auth.identity import v3
-from keystoneclient.auth import token_endpoint
-from keystoneclient import exceptions
-from keystoneclient import session as keystone_session
-from keystoneclient.v2_0 import client as keystone_client_v2
+from keystoneauth1 import adapter
+from keystoneauth1 import exceptions
+from keystoneauth1.identity import v2
+from keystoneauth1.identity import v3
+from keystoneauth1 import session as keystone_session
+from keystoneauth1 import token_endpoint
 
 from saharaclient.api import cluster_templates
 from saharaclient.api import clusters
@@ -47,6 +46,26 @@ class HTTPClient(adapter.Adapter):
 
 
 class Client(object):
+    """Client for the OpenStack Data Processing v1 API.
+
+        :param str username: Username for Keystone authentication.
+        :param str api_key: Password for Keystone authentication.
+        :param str project_id: Keystone Tenant id.
+        :param str project_name: Keystone Tenant name.
+        :param str auth_url: Keystone URL that will be used for authentication.
+        :param str sahara_url: Sahara REST API URL to communicate with.
+        :param str endpoint_type: Desired Sahara endpoint type.
+        :param str service_type: Sahara service name in Keystone catalog.
+        :param str input_auth_token: Keystone authorization token.
+        :param session: Keystone Session object.
+        :param auth: Keystone Authentication Plugin object.
+        :param boolean insecure: Allow insecure.
+        :param string cacert: Path to the Privacy Enhanced Mail (PEM) file
+                              which contains certificates needed to establish
+                              SSL connection with the identity service.
+        :param string region_name: Name of a region to select when choosing an
+                                   endpoint from the service catalog.
+    """
     def __init__(self, username=None, api_key=None, project_id=None,
                  project_name=None, auth_url=None, sahara_url=None,
                  endpoint_type='publicURL', service_type='data-processing',
@@ -54,10 +73,12 @@ class Client(object):
                  insecure=False, cacert=None, region_name=None, **kwargs):
 
         if not session:
+            warnings.simplefilter('once', category=DeprecationWarning)
             warnings.warn('Passing authentication parameters to saharaclient '
                           'is deprecated. Please construct and pass an '
                           'authenticated session object directly.',
                           DeprecationWarning)
+            warnings.resetwarnings()
 
             if input_auth_token:
                 auth = token_endpoint.Token(sahara_url, input_auth_token)
@@ -80,10 +101,15 @@ class Client(object):
         if not auth:
             auth = session.auth
 
-        service_type = self._determine_service_type(session,
-                                                    auth,
-                                                    service_type,
-                                                    endpoint_type)
+        # NOTE(Toan): bug #1512801. If sahara_url is provided, it does not
+        # matter if service_type is orthographically correct or not.
+        # Only find Sahara service_type and endpoint in Keystone catalog
+        # if sahara_url is not provided.
+        if not sahara_url:
+            service_type = self._determine_service_type(session,
+                                                        auth,
+                                                        service_type,
+                                                        endpoint_type)
 
         kwargs['user_agent'] = USER_AGENT
         kwargs.setdefault('interface', endpoint_type)
@@ -160,10 +186,3 @@ class Client(object):
                 return st
 
         raise RuntimeError("Could not find Sahara endpoint in catalog")
-
-    @staticmethod
-    def get_projects_list(keystone_client):
-        if isinstance(keystone_client, keystone_client_v2.Client):
-            return keystone_client.tenants
-
-        return keystone_client.projects
