@@ -44,6 +44,18 @@ def _format_cluster_output(data):
     data['anti_affinity'] = osc_utils.format_list(data['anti_affinity'])
 
 
+def _prepare_health_checks(data):
+    additional_data = {}
+    ver = data.get('verification', {})
+    additional_fields = ['verification_status']
+    additional_data['verification_status'] = ver.get('status', 'UNKNOWN')
+    for check in ver.get('checks', []):
+        row_name = "Health check (%s)" % check['name']
+        additional_data[row_name] = check['status']
+        additional_fields.append(row_name)
+    return additional_data, additional_fields
+
+
 def _get_plugin_version(cluster_template, client):
     ct = utils.get_resource(client.cluster_templates, cluster_template)
     return ct.plugin_name, ct.hadoop_version, ct.id
@@ -164,8 +176,8 @@ class CreateCluster(show.ShowOne):
 
             image_id = utils.get_resource_id(client.images, parsed_args.image)
 
-            net_id = (network_client.api.find_attr(
-                'networks', parsed_args.neutron_network)['id'] if
+            net_id = (network_client.find_network(
+                parsed_args.neutron_network, ignore_missing=False).id if
                 parsed_args.neutron_network else None)
 
             data = client.clusters.create(
@@ -294,7 +306,12 @@ class ShowCluster(show.ShowOne):
             metavar="<cluster>",
             help="Name or id of the cluster to display",
         )
-
+        parser.add_argument(
+            '--verification',
+            action='store_true',
+            default=False,
+            help='List additional fields for verifications',
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -305,7 +322,12 @@ class ShowCluster(show.ShowOne):
             client.clusters, parsed_args.cluster).to_dict()
 
         _format_cluster_output(data)
-        data = utils.prepare_data(data, CLUSTER_FIELDS)
+        fields = []
+        if parsed_args.verification:
+            ver_data, fields = _prepare_health_checks(data)
+            data.update(ver_data)
+        fields.extend(CLUSTER_FIELDS)
+        data = utils.prepare_data(data, fields)
 
         return self.dict2columns(data)
 
@@ -433,14 +455,14 @@ class UpdateCluster(show.ShowOne):
                     'An error occurred when reading '
                     'shares from file %s: %s' % (parsed_args.shares, e))
 
-        data = client.clusters.update(
-            cluster_id,
+        update_dict = utils.create_dict_from_kwargs(
             name=parsed_args.name,
             description=parsed_args.description,
             is_public=parsed_args.is_public,
             is_protected=parsed_args.is_protected,
             shares=shares
-        ).cluster
+        )
+        data = client.clusters.update(cluster_id, **update_dict).cluster
 
         _format_cluster_output(data)
         data = utils.prepare_data(data, CLUSTER_FIELDS)
@@ -546,3 +568,56 @@ class ScaleCluster(show.ShowOne):
         data = utils.prepare_data(data, CLUSTER_FIELDS)
 
         return self.dict2columns(data)
+
+
+class VerificationUpdateCluster(show.ShowOne):
+    """Updates cluster verifications"""
+
+    log = logging.getLogger(__name__ + ".VerificationUpdateCluster")
+
+    def get_parser(self, prog_name):
+        parser = super(VerificationUpdateCluster, self).get_parser(prog_name)
+
+        parser.add_argument(
+            'cluster',
+            metavar="<cluster>",
+            help="Name or ID of the cluster",
+        )
+        status = parser.add_mutually_exclusive_group(required=True)
+        status.add_argument(
+            '--start',
+            action='store_const',
+            const='START',
+            help='Start health verification for the cluster',
+            dest='status'
+        )
+        status.add_argument(
+            '--show',
+            help='Show health of the cluster',
+            action='store_true'
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+        client = self.app.client_manager.data_processing
+
+        if parsed_args.show:
+            data = utils.get_resource(
+                client.clusters, parsed_args.cluster).to_dict()
+            ver_data, ver_fields = _prepare_health_checks(data)
+            data = utils.prepare_data(ver_data, ver_fields)
+            return self.dict2columns(data)
+        else:
+            cluster_id = utils.get_resource_id(
+                client.clusters, parsed_args.cluster)
+            client.clusters.verification_update(
+                cluster_id, parsed_args.status)
+            if parsed_args.status == 'START':
+                print_status = 'started'
+            sys.stdout.write(
+                'Cluster "{cluster}" health verification has been '
+                '{status}.'.format(cluster=parsed_args.cluster,
+                                   status=print_status))
+
+            return {}, {}
