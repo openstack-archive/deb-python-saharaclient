@@ -67,8 +67,8 @@ Build-Depends-Indep: python-babel,
                      subunit,
                      testrepository,
 Standards-Version: 3.9.7
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/python-saharaclient.git;a=summary
-Vcs-Git: git://anonscm.debian.org/openstack/python-saharaclient.git
+Vcs-Browser: https://anonscm.debian.org/gitweb/?p=openstack/python-saharaclient.git;a=summary
+Vcs-Git: https://anonscm.debian.org/git/openstack/python-saharaclient.git
 Homepage: https://github.com/openstack/python-saharaclient
 
 Package: python-saharaclient
