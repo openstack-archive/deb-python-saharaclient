@@ -1,3 +1,10 @@
+python-saharaclient (0.13.0-2) experimental; urgency=medium
+
+  * Downgrade openstackclient (build-)depends to 2.0.0 to avoid dependency
+    loop.
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 03 Mar 2016 04:32:51 +0000
+
 python-saharaclient (0.13.0-1) experimental; urgency=medium
 
   [ Corey Bryant ]
