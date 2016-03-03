@@ -66,7 +66,7 @@ Build-Depends-Indep: python-babel,
                      python3-tempest-lib (>= 0.14.0),
                      subunit,
                      testrepository,
-Standards-Version: 3.9.6
+Standards-Version: 3.9.7
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/python-saharaclient.git;a=summary
 Vcs-Git: git://anonscm.debian.org/openstack/python-saharaclient.git
 Homepage: https://github.com/openstack/python-saharaclient

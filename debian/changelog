@@ -1,5 +1,6 @@
-python-saharaclient (0.13.0-1) UNRELEASED; urgency=medium
+python-saharaclient (0.13.0-1) experimental; urgency=medium
 
+  [ Corey Bryant ]
   * New upstream release.
   * d/control: Align (Build-)Depends with upstream.
   * d/control: Add python-sphinx-argparse to Build-Depends.
@@ -7,7 +8,10 @@ python-saharaclient (0.13.0-1) UNRELEASED; urgency=medium
   * d/p/drop-doc-conf-git.patch: Drop git from sphinx config file
     file as git repository is not avialable during package builds.
 
- -- Corey Bryant <corey.bryant@canonical.com>  Wed, 02 Mar 2016 08:25:20 -0500
+  [ Thomas Goirand ]
+  * Standards-Version: 3.9.7 (no change).
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 03 Mar 2016 04:23:38 +0000
 
 python-saharaclient (0.11.1-3) unstable; urgency=medium
 
