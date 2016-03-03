@@ -2,12 +2,12 @@ Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: python-saharaclient
 Source: git://github.com/openstack/python-saharaclient.git
 
-Files: debian/*
-Copyright: 2012 Thomas Goirand <zigo@debian.org>
+Files: *
+Copyright: (c) 2012-2016, Openstack Foundation
 License: Apache-2
 
-Files: *
-Copyright: 2012, Openstack LLC
+Files: debian/*
+Copyright: (c) 2012-2016, Thomas Goirand <zigo@debian.org>
 License: Apache-2
 
 License: Apache-2
