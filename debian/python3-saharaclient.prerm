@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ] ; then
+	update-alternatives --remove sahara /usr/bin/python3-sahara
+fi
+
+#DEBHELPER#
+
+exit 0
