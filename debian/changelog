@@ -8,6 +8,7 @@ python-saharaclient (0.15.0-1) experimental; urgency=medium
   * Fixed (build-)depends for this release.
   * Using pkgos-dh_auto_{test,install} from openstack-pkg-tools >= 52~.
   * Removed remove-failing-unit-discovery.patch.
+  * Standards-Version is now 3.9.8.
 
  -- Thomas Goirand <zigo@debian.org>  Wed, 13 Jul 2016 10:31:48 +0200
 
