@@ -1,8 +1,12 @@
-python-saharaclient (0.14.0-3) UNRELEASED; urgency=medium
+python-saharaclient (0.15.0-1) experimental; urgency=medium
 
+  [ Ivan Udovichenko ]
   * d/*.postinst,*.postrm,*.prerm: Update alternatives of saharaclient binaries.
 
- -- Ivan Udovichenko <iudovichenko@mirantis.com>  Tue, 26 Apr 2016 17:35:38 +0300
+  [ Thomas Goirand ]
+  * New upstream release.
+
+ -- Thomas Goirand <zigo@debian.org>  Wed, 13 Jul 2016 10:31:48 +0200
 
 python-saharaclient (0.14.0-2) unstable; urgency=medium
 
