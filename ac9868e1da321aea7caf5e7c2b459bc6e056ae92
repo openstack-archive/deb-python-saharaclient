@@ -1,0 +1,10 @@
+Verified-1: Sahara Hadoop Cluster CI <elastic-hadoop-ci@mirantis.com>
+Code-Review+1: Clint Adams <clint@gcfm.net>
+Code-Review+2: Sergey Lukjanov <slukjanov@mirantis.com>
+Workflow+1: Sergey Lukjanov <slukjanov@mirantis.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 24 Mar 2016 17:23:53 +0000
+Reviewed-on: https://review.openstack.org/297158
+Project: openstack/deb-python-saharaclient
+Branch: refs/heads/stable/mitaka
