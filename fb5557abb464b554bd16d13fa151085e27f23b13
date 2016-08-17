@@ -1,0 +1,10 @@
+Verified+1: Sahara Hadoop Cluster CI <elastic-hadoop-ci@mirantis.com>
+Code-Review+2: Elise Gafford <egafford@redhat.com>
+Code-Review+2: Michael McCune <msm@redhat.com>
+Workflow+1: Elise Gafford <egafford@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 23 Jun 2016 19:59:06 +0000
+Reviewed-on: https://review.openstack.org/326582
+Project: openstack/deb-python-saharaclient
+Branch: refs/heads/master

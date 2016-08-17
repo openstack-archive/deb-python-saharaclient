@@ -1,0 +1,8 @@
+Code-Review+2: Vitaly Gridnev <vgridnev@mirantis.com>
+Workflow+1: Vitaly Gridnev <vgridnev@mirantis.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 17 Jun 2016 22:47:32 +0000
+Reviewed-on: https://review.openstack.org/331187
+Project: openstack/deb-python-saharaclient
+Branch: refs/heads/master

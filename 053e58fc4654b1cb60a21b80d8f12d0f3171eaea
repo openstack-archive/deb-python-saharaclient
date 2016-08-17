@@ -1,0 +1,11 @@
+Code-Review+2: Vitaly Gridnev <vgridnev@mirantis.com>
+Code-Review+1: Evgeny Sikachev <esikachev@mirantis.com>
+Verified+1: Sahara Hadoop Cluster CI <elastic-hadoop-ci@mirantis.com>
+Code-Review+2: Elise Gafford <egafford@redhat.com>
+Workflow+1: Elise Gafford <egafford@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 06 Jul 2016 20:14:24 +0000
+Reviewed-on: https://review.openstack.org/333935
+Project: openstack/deb-python-saharaclient
+Branch: refs/heads/master
