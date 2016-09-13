@@ -36,10 +36,13 @@ class JobBinariesManager(base.ResourceManager):
 
         return self._create('/job-binaries', data, 'job_binary')
 
-    def list(self, search_opts=None):
+    def list(self, search_opts=None, limit=None, marker=None,
+             sort_by=None, reverse=None):
         """Get a list of Job Binaries."""
-        query = base.get_query_string(search_opts)
-        return self._list('/job-binaries%s' % query, 'binaries')
+        query = base.get_query_string(search_opts, limit=limit, marker=marker,
+                                      sort_by=sort_by, reverse=reverse)
+        url = "/job-binaries%s" % query
+        return self._page(url, 'binaries', limit)
 
     def get(self, job_binary_id):
         """Get information about a Job Binary."""

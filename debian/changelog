@@ -1,3 +1,14 @@
+python-saharaclient (0.18.0-1) experimental; urgency=medium
+
+  [ Corey Bryant ]
+  * New upstream release.
+  * d/control: Align (Build-)Depends with upstream.
+
+  [ Thomas Goirand ]
+  * Using OpenStack's Gerrit as VCS URLs.
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 13 Sep 2016 18:59:58 +0200
+
 python-saharaclient (0.15.0-1) experimental; urgency=medium
 
   [ Ivan Udovichenko ]

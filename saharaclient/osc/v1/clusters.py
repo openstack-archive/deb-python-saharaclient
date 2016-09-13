@@ -16,12 +16,11 @@
 import json
 import sys
 
-from cliff import command
-from cliff import lister
-from cliff import show
-from openstackclient.common import exceptions
-from openstackclient.common import utils as osc_utils
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils as osc_utils
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 
 from saharaclient.osc.v1 import utils
 
@@ -61,7 +60,7 @@ def _get_plugin_version(cluster_template, client):
     return ct.plugin_name, ct.hadoop_version, ct.id
 
 
-class CreateCluster(show.ShowOne):
+class CreateCluster(command.ShowOne):
     """Creates cluster"""
 
     log = logging.getLogger(__name__ + ".CreateCluster")
@@ -225,7 +224,7 @@ class CreateCluster(show.ShowOne):
         return self.dict2columns(data)
 
 
-class ListClusters(lister.Lister):
+class ListClusters(command.Lister):
     """Lists clusters"""
 
     log = logging.getLogger(__name__ + ".ListClusters")
@@ -294,7 +293,7 @@ class ListClusters(lister.Lister):
         )
 
 
-class ShowCluster(show.ShowOne):
+class ShowCluster(command.ShowOne):
     """Display cluster details"""
 
     log = logging.getLogger(__name__ + ".ShowCluster")
@@ -312,14 +311,40 @@ class ShowCluster(show.ShowOne):
             default=False,
             help='List additional fields for verifications',
         )
+
+        parser.add_argument(
+            '--show-progress',
+            action='store_true',
+            default=False,
+            help='Provides ability to show brief details of event logs.'
+        )
+
+        parser.add_argument(
+            '--full-dump-events',
+            action='store_true',
+            default=False,
+            help='Provides ability to make full dump with event log details.'
+        )
         return parser
 
     def take_action(self, parsed_args):
         self.log.debug("take_action(%s)" % parsed_args)
         client = self.app.client_manager.data_processing
 
+        kwargs = {}
+        if parsed_args.show_progress or parsed_args.full_dump_events:
+            kwargs['show_progress'] = True
         data = utils.get_resource(
-            client.clusters, parsed_args.cluster).to_dict()
+            client.clusters, parsed_args.cluster, **kwargs).to_dict()
+        provision_steps = data.get('provision_progress', [])
+        provision_steps = utils.created_at_sorted(provision_steps)
+
+        if parsed_args.full_dump_events:
+            file_name = utils.random_name('event-logs')
+            # making full dump
+            with open(file_name, 'w') as file:
+                jsonutils.dump(provision_steps, file, indent=4)
+            sys.stdout.write('Event log dump saved to file: %s\n' % file_name)
 
         _format_cluster_output(data)
         fields = []
@@ -327,9 +352,24 @@ class ShowCluster(show.ShowOne):
             ver_data, fields = _prepare_health_checks(data)
             data.update(ver_data)
         fields.extend(CLUSTER_FIELDS)
-        data = utils.prepare_data(data, fields)
 
-        return self.dict2columns(data)
+        data = self.dict2columns(utils.prepare_data(data, fields))
+
+        if parsed_args.show_progress:
+            output_steps = []
+            for step in provision_steps:
+                st_name, st_type = step['step_name'], step['step_type']
+                description = "%s: %s" % (st_type, st_name)
+                if step['successful'] is None:
+                    progress = "Step in progress"
+                elif step['successful']:
+                    progress = "Step completed successfully"
+                else:
+                    progress = 'Step has failed events'
+                output_steps += [(description, progress)]
+            data = utils.extend_columns(data, output_steps)
+
+        return data
 
 
 class DeleteCluster(command.Command):
@@ -378,7 +418,7 @@ class DeleteCluster(command.Command):
                         'successfully.\n'.format(cluster=cluster_arg))
 
 
-class UpdateCluster(show.ShowOne):
+class UpdateCluster(command.ShowOne):
     """Updates cluster"""
 
     log = logging.getLogger(__name__ + ".UpdateCluster")
@@ -470,7 +510,7 @@ class UpdateCluster(show.ShowOne):
         return self.dict2columns(data)
 
 
-class ScaleCluster(show.ShowOne):
+class ScaleCluster(command.ShowOne):
     """Scales cluster"""
 
     log = logging.getLogger(__name__ + ".ScaleCluster")
@@ -570,7 +610,7 @@ class ScaleCluster(show.ShowOne):
         return self.dict2columns(data)
 
 
-class VerificationUpdateCluster(show.ShowOne):
+class VerificationUpdateCluster(command.ShowOne):
     """Updates cluster verifications"""
 
     log = logging.getLogger(__name__ + ".VerificationUpdateCluster")

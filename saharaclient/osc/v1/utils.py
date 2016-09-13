@@ -22,11 +22,27 @@ from oslo_utils import uuidutils
 from saharaclient.api import base
 
 
-def get_resource(manager, name_or_id):
+def get_resource(manager, name_or_id, **kwargs):
     if uuidutils.is_uuid_like(name_or_id):
-        return manager.get(name_or_id)
+        return manager.get(name_or_id, **kwargs)
     else:
-        return manager.find_unique(name=name_or_id)
+        resource = manager.find_unique(name=name_or_id)
+        if kwargs:
+            # we really need additional call to apply kwargs
+            resource = manager.get(resource.id, **kwargs)
+        return resource
+
+
+def created_at_sorted(objs, reverse=False):
+    return sorted(objs, key=created_at_key, reverse=reverse)
+
+
+def random_name(prefix=None):
+    return "%s-%s" % (prefix, uuidutils.generate_uuid()[:8])
+
+
+def created_at_key(obj):
+    return timeutils.parse_isotime(obj["created_at"])
 
 
 def get_resource_id(manager, name_or_id):
@@ -47,6 +63,14 @@ def prepare_data(data, fields):
             new_data[f.replace('_', ' ').capitalize()] = data[f]
 
     return new_data
+
+
+def unzip(data):
+    return zip(*data)
+
+
+def extend_columns(columns, items):
+    return unzip(list(unzip(columns)) + [('', '')] + items)
 
 
 def prepare_column_headers(columns, remap=None):

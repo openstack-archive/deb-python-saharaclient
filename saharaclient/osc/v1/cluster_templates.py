@@ -16,18 +16,16 @@
 import json
 import sys
 
-from cliff import command
-from cliff import lister
-from cliff import show
-from openstackclient.common import exceptions
-from openstackclient.common import utils as osc_utils
+from osc_lib.command import command
+from osc_lib import exceptions
+from osc_lib import utils as osc_utils
 from oslo_log import log as logging
 
 from saharaclient.osc.v1 import utils
 
 CT_FIELDS = ['id', 'name', 'plugin_name', 'plugin_version', 'description',
              'node_groups', 'anti_affinity', 'use_autoconfig', 'is_default',
-             'is_protected', 'is_public']
+             'is_protected', 'is_public', 'domain_name']
 
 
 def _format_node_groups_list(node_groups):
@@ -63,7 +61,7 @@ def _configure_node_groups(node_groups, client):
     return plugin, plugin_version, node_groups
 
 
-class CreateClusterTemplate(show.ShowOne):
+class CreateClusterTemplate(command.ShowOne):
     """Creates cluster template"""
 
     log = logging.getLogger(__name__ + ".CreateClusterTemplate")
@@ -134,6 +132,12 @@ class CreateClusterTemplate(show.ShowOne):
             metavar='<filename>',
             help='JSON representation of the cluster template configs'
         )
+        parser.add_argument(
+            '--domain-name',
+            metavar='<domain-name>',
+            help='Domain name for instances of this cluster template. This '
+                 'option is available if \'use_designate\' config is True'
+        )
         return parser
 
     def take_action(self, parsed_args):
@@ -193,7 +197,8 @@ class CreateClusterTemplate(show.ShowOne):
                 cluster_configs=configs,
                 shares=shares,
                 is_public=parsed_args.public,
-                is_protected=parsed_args.protected
+                is_protected=parsed_args.protected,
+                domain_name=parsed_args.domain_name
             ).to_dict()
 
         _format_ct_output(data)
@@ -202,7 +207,7 @@ class CreateClusterTemplate(show.ShowOne):
         return self.dict2columns(data)
 
 
-class ListClusterTemplates(lister.Lister):
+class ListClusterTemplates(command.Lister):
     """Lists cluster templates"""
 
     log = logging.getLogger(__name__ + ".ListClusterTemplates")
@@ -274,7 +279,7 @@ class ListClusterTemplates(lister.Lister):
         )
 
 
-class ShowClusterTemplate(show.ShowOne):
+class ShowClusterTemplate(command.ShowOne):
     """Display cluster template details"""
 
     log = logging.getLogger(__name__ + ".ShowClusterTemplate")
@@ -329,7 +334,7 @@ class DeleteClusterTemplate(command.Command):
                 'successfully.\n'.format(ct=ct))
 
 
-class UpdateClusterTemplate(show.ShowOne):
+class UpdateClusterTemplate(command.ShowOne):
     """Updates cluster template"""
 
     log = logging.getLogger(__name__ + ".UpdateClusterTemplate")
@@ -426,6 +431,13 @@ class UpdateClusterTemplate(show.ShowOne):
             metavar='<filename>',
             help='JSON representation of the cluster template configs'
         )
+        parser.add_argument(
+            '--domain-name',
+            metavar='<domain-name>',
+            default=None,
+            help='Domain name for instances of this cluster template. This '
+                 'option is available if \'use_designate\' config is True'
+        )
         parser.set_defaults(is_public=None, is_protected=None,
                             use_autoconfig=None)
         return parser
@@ -483,7 +495,8 @@ class UpdateClusterTemplate(show.ShowOne):
                 cluster_configs=configs,
                 shares=shares,
                 is_public=parsed_args.is_public,
-                is_protected=parsed_args.is_protected
+                is_protected=parsed_args.is_protected,
+                domain_name=parsed_args.domain_name
             )
 
             data = client.cluster_templates.update(
