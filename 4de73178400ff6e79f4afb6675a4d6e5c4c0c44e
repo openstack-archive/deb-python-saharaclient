@@ -1,0 +1,10 @@
+Verified+1: Sahara Hadoop Cluster CI <elastic-hadoop-ci@mirantis.com>
+Code-Review+2: Vitaly Gridnev <vgridnev@mirantis.com>
+Workflow+1: Vitaly Gridnev <vgridnev@mirantis.com>
+Code-Review+1: Sharat Sharma <sharat.sharma@nectechnologies.in>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 02 Feb 2017 16:32:43 +0000
+Reviewed-on: https://review.openstack.org/427648
+Project: openstack/deb-python-saharaclient
+Branch: refs/heads/stable/ocata
