@@ -1,0 +1,11 @@
+Verified+1: Sahara Hadoop Cluster CI <elastic-hadoop-ci@mirantis.com>
+Code-Review+1: pawnesh kumar <pawnesh.kumar@nectechnologies.in>
+Code-Review+1: M V P Nitesh <m.nitesh@nectechnologies.in>
+Code-Review+2: Telles Mota Vidal Nóbrega <tenobreg@redhat.com>
+Workflow+1: Vitaly Gridnev <vgridnev@mirantis.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 30 Mar 2017 14:33:45 +0000
+Reviewed-on: https://review.openstack.org/451636
+Project: openstack/deb-python-saharaclient
+Branch: refs/heads/master
