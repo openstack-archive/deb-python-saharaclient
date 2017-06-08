@@ -1,0 +1,8 @@
+Code-Review+2: Telles Mota Vidal Nóbrega <tenobreg@redhat.com>
+Workflow+1: Vitaly Gridnev <gridnevvvit@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 08 Jun 2017 12:59:36 +0000
+Reviewed-on: https://review.openstack.org/470692
+Project: openstack/deb-python-saharaclient
+Branch: refs/heads/master
